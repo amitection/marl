@@ -6,19 +6,18 @@ import argparse
 import os
 import sys
 import traceback
+import copy
+from state import AgentState, EnvironmentState
 from datetime import datetime
+from marlagent.rlagent import RLAgent
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
 
+
 from nameserver import NameServer
 
 pidfile = "assets/ns.pid"
-
-
-def exit_handler(is_server, ns):
-    os.unlink(pidfile)
-    ns.shutdown()
 
 
 def energy_request_handler(agent, message):
@@ -26,8 +25,39 @@ def energy_request_handler(agent, message):
 
 
 def energy_consumption_handler(agent, message):
-    agent.log_info('Received: %s' % message['test'])
+    agent.log_info('Received: %s' % message['topic'])
+    yield {'topic': 'Ok'}  # immediate reply
 
+    agent.log_info("Deepy copy of global state initiated...")
+    curr_state = copy.deepcopy(g_agent_state)
+
+    # update with new values of energy consumption and generation
+    curr_state.time = message['time']
+    curr_state.energy_consumption += message['consumption']
+    curr_state.energy_generation += message['generation']
+
+    # call get action with this new state
+    action = rl_agent.get_action(copy.deepcopy(curr_state))
+
+    # perform action and update global agent state
+    next_state = curr_state.get_successor_state(action)
+
+    # calculate reward
+    delta_reward = next_state.get_score() - curr_state.get_score()
+
+    # update agent with reward
+    rl_agent.update(state = curr_state, action = action, next_state = next_state, reward = delta_reward)
+
+    # update the global state
+    g_agent_state.energy_consumption = next_state.energy_consumption
+    g_agent_state.energy_generation = next_state.energy_generation
+    g_agent_state.battery_curr = next_state.battery_curr
+    g_agent_state.environment_state = next_state.environment_state
+    
+
+def predict_energy_generation(time):
+    print("TBD")
+    return 0.0
 
 def temp_handler(agent, message):
     yield {'topic' : 'Ok'} # immediate reply
@@ -87,9 +117,19 @@ if __name__ == '__main__':
     is_name_server_host, ns = initiate_nameserver(args.nameserver)
 
     try:
+
+        # instantiate reinforcement learning module and making it globally accessible
+        rl_agent = RLAgent()
+        global rl_agent
+
+        # Declare a agent state and make it global
+        environment_state = EnvironmentState(0.0, 0.0)
+        g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
+                                   battery_curr = 0.0, time = datetime.now(), environment_state = environment_state)
+
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = ns.addr(), serializer='json')
-        agent.bind('REP', alias='consumption', handler=temp_handler)
+        agent.bind('REP', alias='consumption', handler=energy_consumption_handler)
 
         if is_name_server_host:
             start_server_job(ns)

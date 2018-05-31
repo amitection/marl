@@ -14,7 +14,7 @@ class AgentState:
 
     actions = ['request', 'grant', 'deny_request', 'consume_and_store']
 
-    def __init__(self, name, energy_consumption, energy_generation, battery_curr, time):
+    def __init__(self, name, energy_consumption, energy_generation, battery_curr, time, environment_state):
         print("registering state...")
         self.name = name
         self.energy_consumption = energy_consumption
@@ -22,6 +22,9 @@ class AgentState:
         self.battery_max = 280
         self.battery_curr = battery_curr
         self.time = time
+
+        self.environment_state = environment_state
+
 
     def get_possible_actions(self):
         '''
@@ -37,6 +40,23 @@ class AgentState:
             possible_actions.append('request')
 
         return possible_actions
+
+
+    def get_successor_state(self, action):
+        """
+        Observe the state transition on the input action and return the next state.
+
+        :param state:
+        :param action:
+        :return: next state
+        """
+        #TODO
+        return self
+
+
+    def get_score(self):
+        #TODO
+        return "the score of this current state"
 
 
 class EnvironmentState:
