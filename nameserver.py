@@ -1,6 +1,7 @@
 import time
 import pandas as pd
 from osbrain import run_agent
+from datetime import datetime
 
 class NameServer:
     def __init__(self, ns):
@@ -33,13 +34,24 @@ class NameServer:
         alice_addr = alice.addr(alias='consumption')
         bob_addr = bob.addr(alias='consumption')
 
+        message = {
+            'topic': 'ENERGY_CONSUMPTION',
+            'time': datetime.now(),
+            'consumption': 0.0
+        }
+
         try :
             for timestep in range(1051230, 2103810, 30):
                 d1_consumption = d1.loc[d1['Electricity.Timestep'] == timestep]
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
-                self.send_message(server_agent, alice_addr, alias='consumption', message={'topic':'Hello Alice!'})
-                self.send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'Hello Bob!'})
+                message['time'] = d1_consumption['Time']
+
+                message['consumption'] = float(d1_consumption['Sum [kWh]'])
+                self.send_message(server_agent, alice_addr, alias='consumption', message=message)
+
+                message['consumption'] = float(d2_consumption['Sum [kWh]'])
+                self.send_message(server_agent, bob_addr, alias='consumption', message=message)
 
                 time.sleep(3)
         finally:

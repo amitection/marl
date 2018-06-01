@@ -1,6 +1,6 @@
 import util
 import random
-
+import feat_extractor as fe
 
 class RLAgent:
 
@@ -14,6 +14,8 @@ class RLAgent:
 
         self.weights = util.Counter()
 
+        self.feat_extractor = fe.FeatureExtractor()
+
 
     def get_qValue(self, state, action):
         """
@@ -26,31 +28,13 @@ class RLAgent:
         """
 
         # TODO
-        features = self.featExtractor.getFeatures(state, action)
+        features = self.feat_extractor.get_features(state, action)
 
         q_value = 0.0
         for f_key in features:
             q_value = q_value + (features[f_key] * self.weights[f_key])
 
         return q_value
-
-
-    # def compute_value_from_qValues(self, state):
-    #     """
-    #     Compute the q_value for each action and return the max Q-value as the value of that state
-    #
-    #     :param state:
-    #     :return:
-    #     """
-    #     # No actions available
-    #     if len(self._get_legal_actions(state)) == 0:
-    #         return 0.0
-    #
-    #     q_values_for_this_state = []
-    #     for action in self._get_legal_actions(state):
-    #         q_values_for_this_state.append(self.get_qValue(state, action))
-    #
-    #     return max(q_values_for_this_state)
 
 
     def compute_action_from_qValues(self, state):
@@ -106,18 +90,19 @@ class RLAgent:
         :return:
         """
         # TODO
-        features = self.featExtractor.getFeatures(state, action)
+        features = self.feat_extractor.get_features(state, action)
         difference = reward + (self.discount * self.get_value(next_state)) - self.get_qValue(state, action)
 
         for f_key in features:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
 
+        # Write weights into a file to observe learning
+        print(self.weights)
+
 
     def get_policy(self, state):
         return self.compute_action_from_qValues(state)
 
-    # def get_value(self, state):
-    #     return self.compute_value_from_qValues(state)
 
     def do_action(self, state, action):
         util.raiseNotDefined()

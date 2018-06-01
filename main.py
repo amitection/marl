@@ -25,7 +25,7 @@ def energy_request_handler(agent, message):
 
 
 def energy_consumption_handler(agent, message):
-    agent.log_info('Received: %s' % message['topic'])
+    agent.log_info('Received: %s' % message)
     yield {'topic': 'Ok'}  # immediate reply
 
     agent.log_info("Deepy copy of global state initiated...")
@@ -39,12 +39,14 @@ def energy_consumption_handler(agent, message):
     # call get action with this new state
     action = rl_agent.get_action(copy.deepcopy(curr_state))
 
+    agent.log_info('Performing action action (%s).' % action)
     # perform action and update global agent state
     next_state = curr_state.get_successor_state(action)
 
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
 
+    agent.log_info('Updating agent with reward %s.' % delta_reward)
     # update agent with reward
     rl_agent.update(state = curr_state, action = action, next_state = next_state, reward = delta_reward)
 
@@ -53,7 +55,9 @@ def energy_consumption_handler(agent, message):
     g_agent_state.energy_generation = next_state.energy_generation
     g_agent_state.battery_curr = next_state.battery_curr
     g_agent_state.environment_state = next_state.environment_state
-    
+
+    agent.log_info('Completed update operation. Resting!')
+
 
 def predict_energy_generation(time):
     print("TBD")
