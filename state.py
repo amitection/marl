@@ -1,3 +1,5 @@
+import copy
+
 class AgentState:
     """
     Energy Consumption
@@ -12,7 +14,7 @@ class AgentState:
     Month of the year
     """
 
-    actions = ['request', 'grant', 'deny_request', 'consume_and_store']
+    actions = ['request_ally', 'request_grid', 'grant', 'deny_request', 'consume_and_store']
 
     def __init__(self, name, energy_consumption, energy_generation, battery_curr, time, environment_state):
         print("registering state...")
@@ -36,8 +38,10 @@ class AgentState:
         if(self.energy_generation > self.energy_consumption):
             possible_actions.append('consume_and_store')
             possible_actions.append('grant')
+            possible_actions.append('deny_request')
         else:
-            possible_actions.append('request')
+            possible_actions.append('request_ally')
+            possible_actions.append('request_grid')
 
         return possible_actions
 
@@ -51,6 +55,8 @@ class AgentState:
         :return: next state
         """
         #TODO
+
+
         return self
 
 

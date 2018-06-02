@@ -39,9 +39,11 @@ def energy_consumption_handler(agent, message):
     # call get action with this new state
     action = rl_agent.get_action(copy.deepcopy(curr_state))
 
-    agent.log_info('Performing action action (%s).' % action)
+    agent.log_info('Performing action (%s).' % action)
     # perform action and update global agent state
     next_state = curr_state.get_successor_state(action)
+    rl_agent.do_action(curr_state, action, allies)
+
 
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
@@ -112,6 +114,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--agentname', required=True, help='Name of the agent')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
+    parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
 
     args = parser.parse_args()
 
@@ -130,6 +133,10 @@ if __name__ == '__main__':
         environment_state = EnvironmentState(0.0, 0.0)
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = 0.0, time = datetime.now(), environment_state = environment_state)
+        global g_agent_state
+
+        allies = [ally for ally in args.allies.split(",") ]
+        global allies
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = ns.addr(), serializer='json')

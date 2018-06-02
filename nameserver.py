@@ -48,19 +48,19 @@ class NameServer:
                 message['time'] = d1_consumption['Time']
 
                 message['consumption'] = float(d1_consumption['Sum [kWh]'])
-                self.send_message(server_agent, alice_addr, alias='consumption', message=message)
+                self._send_message(server_agent, alice_addr, alias='consumption', message=message)
 
                 message['consumption'] = float(d2_consumption['Sum [kWh]'])
-                self.send_message(server_agent, bob_addr, alias='consumption', message=message)
+                self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
                 time.sleep(3)
         finally:
             # Safe shutdown of all agents for testing
-            self.send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
-            self.send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
+            self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
+            self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
 
 
-    def send_message(self, server_agent, client_addr, alias,  message):
+    def _send_message(self, server_agent, client_addr, alias,  message):
         server_agent.connect(client_addr, alias=alias)
         server_agent.send(alias, message=message)
         reply = server_agent.recv(alias)

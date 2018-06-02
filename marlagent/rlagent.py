@@ -1,6 +1,8 @@
 import util
 import random
+import copy
 import feat_extractor as fe
+from marlagent import agent_actions
 
 class RLAgent:
 
@@ -13,8 +15,8 @@ class RLAgent:
         self.numTraining = int(numTraining)
 
         self.weights = util.Counter()
-
         self.feat_extractor = fe.FeatureExtractor()
+        self.central_grid = util.Counter() # note the energy borrowed from central grid
 
 
     def get_qValue(self, state, action):
@@ -35,6 +37,24 @@ class RLAgent:
             q_value = q_value + (features[f_key] * self.weights[f_key])
 
         return q_value
+
+
+    def compute_value_from_qValues(self, state):
+        """
+        Compute the q_value for each action and return the max Q-value as the value of that state
+
+        :param state:
+        :return:
+        """
+        # No actions available
+        if len(self._get_legal_actions(state)) == 0:
+            return 0.0
+
+        q_values_for_this_state = []
+        for action in self._get_legal_actions(state):
+            q_values_for_this_state.append(self.get_qValue(state, action))
+
+        return max(q_values_for_this_state)
 
 
     def compute_action_from_qValues(self, state):
@@ -91,7 +111,7 @@ class RLAgent:
         """
         # TODO
         features = self.feat_extractor.get_features(state, action)
-        difference = reward + (self.discount * self.get_value(next_state)) - self.get_qValue(state, action)
+        difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
 
         for f_key in features:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
@@ -102,10 +122,6 @@ class RLAgent:
 
     def get_policy(self, state):
         return self.compute_action_from_qValues(state)
-
-
-    def do_action(self, state, action):
-        util.raiseNotDefined()
 
 
     def get_weights(self):
@@ -125,3 +141,70 @@ class RLAgent:
             legal_actions.append('consume_and_store')
 
         return legal_actions
+
+
+    def do_action(self, state, action, ns, agent, allies, time):
+        '''
+        Perform an action and return the next state
+        :param state:
+        :param action:
+        :return: the next state on taking the action
+        '''
+
+        next_state = copy.deepcopy(state)
+        if action['action'] == 'consume_and_store':
+            diff = state.energy_generation - state.energy_consumption
+
+            # Store the excess
+            next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
+
+            next_state.energy_generation = 0.0
+            next_state.energy_consumption = 0.0
+
+
+        if action['action'] == 'request_ally':
+            # TODO think about what to do if ally does not serve request
+            diff = (state.energy_generation + state.battery_curr) - state.energy_consumption
+            energy_grant = 0.0
+            if diff < 0.0:
+                energy_grant = agent_actions.request_ally(ns, agent, allies, energy_amt = abs(diff), time = time)
+                next_state.energy_generation = 0.0
+
+                # TODO think how to handle energy consumption if
+                # If energy consumption is positive in next state then penalize agent
+                next_state.energy_consumption = abs(diff) - energy_grant
+
+            else:
+                print("Ally not requested as enough energy available in battery.")
+                next_state.energy_generation = 0.0
+                next_state.energy_consumption = 0.0
+                next_state.battery_curr = diff
+
+
+        if action['action'] == 'request_grid':
+
+            self.central_grid[time] =  agent_actions.get_energy_balance(state)
+            next_state = agent_actions.energy_transaction(state, next_state, self.central_grid[time])
+
+
+        if action['action'] == 'grant':
+            energy_request = action['data']['energy_request']
+            bal = (state.energy_generation + state.battery_curr) - energy_request
+            energy_grant = 0.0
+
+            if(bal >= 0):
+                energy_grant = energy_request
+                next_state.energy_generation = 0.0
+                next_state.battery_curr = 0.0
+            elif(bal < 0):
+                energy_grant = (state.energy_generation + state.battery_curr)
+                next_state.energy_generation = 0.0
+                next_state.battery_curr = 0.0
+
+            # A more complex case can be designed where it gives partial energy
+
+        if action['action'] == 'deny_request':
+            pass
+
+        return next_state
+
