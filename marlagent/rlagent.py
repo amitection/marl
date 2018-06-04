@@ -28,8 +28,6 @@ class RLAgent:
         :param action:
         :return:
         """
-
-        # TODO
         features = self.feat_extractor.get_features(state, action)
 
         q_value = 0.0
@@ -57,14 +55,14 @@ class RLAgent:
         return max(q_values_for_this_state)
 
 
-    def compute_action_from_qValues(self, state):
+    def compute_action_from_qValues(self, state, actions = None):
         """
         Iterate over all the actions and compute their q-values. Then return the action with the highest q-value.
 
         :param state:
         :return:
         """
-        actions = self._get_legal_actions(state)
+        actions = self._get_legal_actions(state, actions)
 
         if len(actions) == 0:
             print("Something wrong. Check!. Maybe all actions are done.")
@@ -79,7 +77,7 @@ class RLAgent:
         return max(action_value_pair, key=lambda x: x[1])[0]
 
 
-    def get_action(self, state):
+    def get_action(self, state, actions = None):
         """
         Compute the action to take in the current state.
         Epsilon decides whether to exploit the current policy or choice a new action randomly.
@@ -88,13 +86,13 @@ class RLAgent:
         :param state:
         :return: appropriate action to take in the current state
         """
-        legal_actions = self._get_legal_actions(state)
+        legal_actions = self._get_legal_actions(state, actions)
         action = None
 
         if util.flip_coin(self.epsilon):
             action = random.choice(legal_actions)
         else:
-            action = self.get_policy(state)
+            action = self.get_policy(state, actions)
 
         return action
 
@@ -120,25 +118,26 @@ class RLAgent:
         print(self.weights)
 
 
-    def get_policy(self, state):
-        return self.compute_action_from_qValues(state)
+    def get_policy(self, state, actions):
+        return self.compute_action_from_qValues(state, actions)
 
 
     def get_weights(self):
         return self.weights
 
 
-    def _get_legal_actions(self, agent_state):
+    def _get_legal_actions(self, agent_state, actions=None):
         """
         Computes the set of actions a agent should take from the set of possible actions
         :param agent_state:
+        :param actions:
         :return: legal actions the agent can take
         """
-        legal_actions =[]
-        possible_actions = agent_state.get_possible_actions()
+        possible_actions = agent_state.get_possible_actions(actions)
 
-        if 'consume_and_store' in possible_actions and 'grant' in possible_actions:
-            legal_actions.append('consume_and_store')
+        # TODO some filtering of actions
+
+        legal_actions = copy.deepcopy(possible_actions)
 
         return legal_actions
 
@@ -188,14 +187,15 @@ class RLAgent:
 
 
         if action['action'] == 'grant':
-            energy_request = action['data']['energy_request']
+            energy_request = action['data']
             bal = (state.energy_generation + state.battery_curr) - energy_request
             energy_grant = 0.0
 
             if(bal >= 0):
                 energy_grant = energy_request
                 next_state.energy_generation = 0.0
-                next_state.battery_curr = 0.0
+                next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
+                                                                              (state.energy_generation - energy_request))
             elif(bal < 0):
                 energy_grant = (state.energy_generation + state.battery_curr)
                 next_state.energy_generation = 0.0
@@ -203,8 +203,12 @@ class RLAgent:
 
             # A more complex case can be designed where it gives partial energy
 
+            return next_state, energy_grant
+
         if action['action'] == 'deny_request':
             pass
 
+
         return next_state
+
 

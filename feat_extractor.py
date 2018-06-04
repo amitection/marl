@@ -1,6 +1,7 @@
 import util
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from state import AgentState
 
 class FeatureExtractor:
 
@@ -31,8 +32,13 @@ class FeatureExtractor:
         for i in range (0, (365 * 48)):
             train_x[i][2] = i%12
 
-        self.ohe = OneHotEncoder(sparse=False)
-        self.ohe.fit(train_x)
+        self.ohe_time = OneHotEncoder(sparse=False)
+        self.ohe_time.fit(train_x)
+
+        self.lb_actions = LabelEncoder()
+        actions_trans = self.lb_actions.fit_transform(AgentState.actions)
+        self.ohe_actions = OneHotEncoder(sparse=False)
+        self.ohe_actions.fit(actions_trans.reshape(-1,1))
 
     def get_features(self, state, action):
         '''
@@ -48,8 +54,8 @@ class FeatureExtractor:
         time_feat['month'] = state.time.dt.month - 1
 
         # Transform and avoid the dummy variable trap
-        features = self.ohe.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
-                                      .reshape(1, -1))[:, :-1]
+        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
+                                           .reshape(1, -1))[:, :-1]
 
         features = list(features[0])
 
@@ -57,12 +63,22 @@ class FeatureExtractor:
         features.append(state.energy_generation)
         features.append(state.battery_curr)
 
+
         # TODO Embed action as a feature into this
+        # Modelling energy request data
+        if action['action'] == 'grant' or action['action'] == 'deny_request':
+            features.append(action['data'])
+        else:
+            features.append(0)
+
+        action_trans = self.ohe_actions.transform(self.lb_actions.transform(action['action']).reshape(1,-1))
+        for f in action_trans[0]:
+            features.append(f)
 
 
         # Transforming into apt data structure
         feat_dict = util.Counter()
         for i in range(len(features)):
-            feat_dict['f_'+str(i)] = features[i]
+            feat_dict['f_'+str(i)] = float(features[i])
 
         return feat_dict

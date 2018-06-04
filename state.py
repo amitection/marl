@@ -28,20 +28,30 @@ class AgentState:
         self.environment_state = environment_state
 
 
-    def get_possible_actions(self):
+    def get_possible_actions(self, actions = None):
         '''
         Computes the set of all legal actions allowed in this state
         :return: array of legal actions
         '''
         possible_actions = []
 
-        if(self.energy_generation > self.energy_consumption):
-            possible_actions.append('consume_and_store')
-            possible_actions.append('grant')
-            possible_actions.append('deny_request')
+        if actions is None:
+
+            if(self.energy_generation > self.energy_consumption):
+                possible_actions.append({'action':'consume_and_store', 'data':None})
+            else:
+                possible_actions.append({'action':'request_ally', 'data':None})
+                possible_actions.append({'action':'request_grid', 'data':None})
+
         else:
-            possible_actions.append('request_ally')
-            possible_actions.append('request_grid')
+            # Case when only options are grant or deny
+            # Simply deny the request if current battery is 0
+            if self.battery_curr <= 0:
+                for action in actions:
+                    if action['action'] == 'deny_request':
+                        possible_actions.append(action)
+            else:
+                possible_actions = actions
 
         return possible_actions
 

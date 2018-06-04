@@ -6,27 +6,84 @@ import argparse
 import os
 import sys
 import traceback
+import time
 import copy
+from threading import Lock
 from state import AgentState, EnvironmentState
 from datetime import datetime
 from marlagent.rlagent import RLAgent
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
-
-
 from nameserver import NameServer
 
 pidfile = "assets/ns.pid"
 
-
 def energy_request_handler(agent, message):
-    agent.log_info('Received: %s' % message['test'])
+    # Acquire the lock
+    lock.acquire()
+
+    agent.log_info('Received: %s' % message)
+    agent.log_info("Deepy copy of global state initiated...")
+    curr_state = copy.deepcopy(g_agent_state)
+
+    # update with new values of energy consumption and generation
+    curr_state.time = message['time']
+
+    # amount of requested energy
+    energy_req = message['energy']
+
+    actions = [{
+        'action': 'deny_request',
+        'data': energy_req
+    },
+    {
+        'action': 'grant',
+        'data': energy_req
+    }
+    ]
+
+    # call get action with this new state
+    action = rl_agent.get_action(copy.deepcopy(curr_state), actions)
+
+    agent.log_info('Performing action (%s).' % action)
+
+    # If energy request is declined
+    if action['action'] ==  'deny_request':
+        yield {'topic':'ENERGY_REQUEST_DECLINE'}
+
+    # perform action and update global agent state
+    next_state, energy_grant = rl_agent.do_action(curr_state, action, allies)
+
+    # if energy request is accepted
+    if action['action'] != 'deny_request':
+        yield {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
+
+    # calculate reward
+    delta_reward = next_state.get_score() - curr_state.get_score()
+
+    agent.log_info('Updating agent with reward %s.' % delta_reward)
+    # update agent with reward
+    rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
+
+    # update the global state
+    g_agent_state.energy_consumption = next_state.energy_consumption
+    g_agent_state.energy_generation = next_state.energy_generation
+    g_agent_state.battery_curr = next_state.battery_curr
+    g_agent_state.environment_state = next_state.environment_state
+
+    agent.log_info('Completed update operation. Resting!')
+
+    # Release the lock
+    lock.release()
 
 
 def energy_consumption_handler(agent, message):
     agent.log_info('Received: %s' % message)
     yield {'topic': 'Ok'}  # immediate reply
+
+    # Acquire the lock
+    lock.acquire()
 
     agent.log_info("Deepy copy of global state initiated...")
     curr_state = copy.deepcopy(g_agent_state)
@@ -41,9 +98,8 @@ def energy_consumption_handler(agent, message):
 
     agent.log_info('Performing action (%s).' % action)
     # perform action and update global agent state
-    next_state = curr_state.get_successor_state(action)
-    rl_agent.do_action(curr_state, action, allies)
-
+    #next_state = curr_state.get_successor_state(action)
+    next_state = rl_agent.do_action(curr_state, action, allies)
 
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
@@ -59,6 +115,9 @@ def energy_consumption_handler(agent, message):
     g_agent_state.environment_state = next_state.environment_state
 
     agent.log_info('Completed update operation. Resting!')
+
+    # Release the lock
+    lock.release()
 
 
 def predict_energy_generation(time):
@@ -123,11 +182,14 @@ if __name__ == '__main__':
     # Initiate name server
     is_name_server_host, ns = initiate_nameserver(args.nameserver)
 
+    lock = Lock()
+    global lock
+
     try:
 
         # instantiate reinforcement learning module and making it globally accessible
         rl_agent = RLAgent()
-        global rl_agent
+        #global rl_agent
 
         # Declare a agent state and make it global
         environment_state = EnvironmentState(0.0, 0.0)
