@@ -49,9 +49,9 @@ class FeatureExtractor:
         '''
 
         time_feat = util.Counter()
-        time_feat['hour'] = state.time.apply(lambda dt: ((dt.hour * 60) + dt.minute) // 30)
-        time_feat['dayofweek'] = state.time.dt.dayofweek
-        time_feat['month'] = state.time.dt.month - 1
+        time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
+        time_feat['dayofweek'] = state.time.weekday() # monday = 0
+        time_feat['month'] = state.time.month - 1
 
         # Transform and avoid the dummy variable trap
         features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
@@ -71,7 +71,7 @@ class FeatureExtractor:
         else:
             features.append(0)
 
-        action_trans = self.ohe_actions.transform(self.lb_actions.transform(action['action']).reshape(1,-1))
+        action_trans = self.ohe_actions.transform(self.lb_actions.transform([action['action']]).reshape(1,-1))
         for f in action_trans[0]:
             features.append(f)
 

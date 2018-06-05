@@ -25,6 +25,15 @@ def cnv_datetime_to_str(time, format):
     # date = datetime.strptime(time, '%Y-%m-%d %H:%M')
     return time.strftime(format)
 
+def get_generation(ts, consumption):
+    generation = 0.0
+    if ts.time().hour < 18 and ts.time().hour > 6:
+        if flip_coin(0.7):
+            generation += consumption + consumption*(0.5)
+        else:
+            generation = consumption
+
+    return generation
 
 class Counter(dict):
     """

@@ -40,7 +40,8 @@ class NameServer:
         message = {
             'topic': 'ENERGY_CONSUMPTION',
             'time': datetime.now().strftime('%Y/%m/%d %H:%M'),
-            'consumption': 0.0
+            'consumption': 0.0,
+            'generation': 0.0
         }
 
         try :
@@ -49,12 +50,15 @@ class NameServer:
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
                 message['time'] = util.cnv_datetime_to_str(d1_consumption['Time'].get(timestep), '%Y/%m/%d %H:%M')
-                # message['time'] = d1_consumption['Time'].strftime('%Y/%m/%d %H:%M')
 
                 message['consumption'] = float(d1_consumption['Sum [kWh]'])
+                message['generation'] = float(
+                    util.get_generation(d1_consumption['Time'].get(timestep), message['consumption']))
                 self._send_message(server_agent, alice_addr, alias='consumption', message=message)
 
                 message['consumption'] = float(d2_consumption['Sum [kWh]'])
+                message['generation'] = float(
+                    util.get_generation(d2_consumption['Time'].get(timestep), message['consumption']))
                 self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
                 time.sleep(3)

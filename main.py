@@ -110,8 +110,7 @@ def energy_consumption_handler(agent, message):
 
     agent.log_info('Performing action (%s).' % action)
     # perform action and update global agent state
-    #next_state = curr_state.get_successor_state(action)
-    next_state = rl_agent.do_action(curr_state, action, allies)
+    next_state = rl_agent.do_action(curr_state, action, ns, agent, allies)
 
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
@@ -192,6 +191,7 @@ if __name__ == '__main__':
     print("Hi! I am "+args.agentname+". I am taking command of this process.")
 
     # Initiate name server
+    global ns
     is_name_server_host, ns = initiate_nameserver(args.nameserver)
 
     global lock
