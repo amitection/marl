@@ -19,6 +19,11 @@ from nameserver import NameServer
 
 pidfile = "assets/ns.pid"
 
+def exit_check(msg):
+    if msg['topic'] == 'exit':
+        return True
+
+
 def energy_request_handler(agent, message):
     # Acquire the lock
     lock.acquire()
@@ -84,6 +89,11 @@ def energy_consumption_handler(agent, message):
 
     # Acquire the lock
     lock.acquire()
+
+    # Exit check
+    if exit_check(message):
+        lock.release()
+        sys.exit(0)
 
     agent.log_info("Deepy copy of global state initiated...")
     curr_state = copy.deepcopy(g_agent_state)

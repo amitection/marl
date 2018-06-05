@@ -4,6 +4,7 @@ Utility file
 import sys
 import inspect
 import random
+from datetime import datetime
 
 
 def raiseNotDefined():
@@ -14,9 +15,15 @@ def raiseNotDefined():
     print("*** Method not implemented: %s at line %s of %s" % (method, line, fileName))
     sys.exit(1)
 
+
 def flip_coin( p ):
     r = random.random()
     return r < p
+
+
+def cnv_datetime_to_str(time, format):
+    # date = datetime.strptime(time, '%Y-%m-%d %H:%M')
+    return time.strftime(format)
 
 
 class Counter(dict):

@@ -1,4 +1,6 @@
 import time
+import util
+import traceback
 import pandas as pd
 from osbrain import run_agent
 from datetime import datetime
@@ -19,6 +21,7 @@ class NameServer:
         '''
         dateparse = lambda dates: pd.datetime.strptime(dates, '%m/%d/%Y %I:%M %p')
         D = pd.read_csv(path_to_file, sep=';', parse_dates=['Time'], date_parser=dateparse)
+        D = D.set_index(D['Electricity.Timestep'])
         return D
 
     def schedule_job(self, server_agent):
@@ -45,7 +48,8 @@ class NameServer:
                 d1_consumption = d1.loc[d1['Electricity.Timestep'] == timestep]
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
-                message['time'] = datetime.strftime(d1_consumption['Time'], '%Y/%m/%d %H:%M')
+                message['time'] = util.cnv_datetime_to_str(d1_consumption['Time'].get(timestep), '%Y/%m/%d %H:%M')
+                # message['time'] = d1_consumption['Time'].strftime('%Y/%m/%d %H:%M')
 
                 message['consumption'] = float(d1_consumption['Sum [kWh]'])
                 self._send_message(server_agent, alice_addr, alias='consumption', message=message)
@@ -54,6 +58,10 @@ class NameServer:
                 self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
                 time.sleep(3)
+
+        except Exception:
+            print(traceback.format_exc())
+
         finally:
             # Safe shutdown of all agents for testing
             self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
