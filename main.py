@@ -9,6 +9,7 @@ import traceback
 import time
 import copy
 from threading import Lock
+from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
 from marlagent.rlagent import RLAgent
@@ -25,10 +26,18 @@ def exit_check(msg):
 
 
 def energy_request_handler(agent, message):
-    # Acquire the lock
-    lock.acquire()
 
     agent.log_info('Received: %s' % message)
+
+    # Acquire the lock
+    lock_count = 0
+    while not lock.acquire():
+        if lock_count <= 2:
+            time.sleep(randint(1, 10) / 10)
+            lock_count += 1
+        else:
+            return {'topic': 'ENERGY_REQUEST_DECLINE'}
+
     agent.log_info("Deepy copy of global state initiated...")
     curr_state = copy.deepcopy(g_agent_state)
 
@@ -112,6 +121,7 @@ def energy_consumption_handler(agent, message):
     # perform action and update global agent state
     next_state = rl_agent.do_action(curr_state, action, ns, agent, allies)
 
+    agent.log_info('Action complete. Calculating reward.')
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
 
@@ -196,6 +206,8 @@ if __name__ == '__main__':
 
     global lock
     lock = Lock()
+    global lock_count
+    lock_count = 0
 
     try:
 
