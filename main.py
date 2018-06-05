@@ -184,8 +184,8 @@ if __name__ == '__main__':
     # Initiate name server
     is_name_server_host, ns = initiate_nameserver(args.nameserver)
 
-    lock = Lock()
     global lock
+    lock = Lock()
 
     try:
 
@@ -195,12 +195,12 @@ if __name__ == '__main__':
 
         # Declare a agent state and make it global
         environment_state = EnvironmentState(0.0, 0.0)
+        global g_agent_state
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = 0.0, time = datetime.now(), environment_state = environment_state)
-        global g_agent_state
 
-        allies = [ally for ally in args.allies.split(",") ]
         global allies
+        allies = [ally for ally in args.allies.split(",") ]
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = ns.addr(), serializer='json')
