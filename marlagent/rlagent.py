@@ -168,10 +168,16 @@ class RLAgent:
             if diff < 0.0:
                 energy_grant = agent_actions.request_ally(ns, agent, allies, energy_amt = abs(diff), time = time)
                 next_state.energy_generation = 0.0
+                next_state.battery_curr = 0.0
+                next_state.environment_state.set_energy_borrowed_from_ally(energy_grant)
 
                 # TODO think how to handle energy consumption if
                 # If energy consumption is positive in next state then penalize agent
                 next_state.energy_consumption = abs(diff) - energy_grant
+
+                if next_state.energy_consumption > 0:
+                    self.central_grid[time] = next_state.energy_consumption
+                    next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time])
 
             else:
                 print("Ally not requested as enough energy available in battery.")
@@ -184,6 +190,7 @@ class RLAgent:
 
             self.central_grid[time] =  agent_actions.get_energy_balance(state)
             next_state = agent_actions.energy_transaction(state, next_state, self.central_grid[time])
+            next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time])
 
 
         if action['action'] == 'grant':

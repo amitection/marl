@@ -90,8 +90,10 @@ def energy_consumption_handler(agent, message):
 
     # update with new values of energy consumption and generation
     curr_state.time = message['time']
-    curr_state.energy_consumption += message['consumption']
-    curr_state.energy_generation += message['generation']
+    curr_state.energy_consumption = message['consumption']
+    curr_state.energy_generation = message['generation']
+    curr_state.environment_state.set_total_consumed(message['consumption'])
+    curr_state.environment_state.set_total_generated(message['generation'])
 
     # call get action with this new state
     action = rl_agent.get_action(copy.deepcopy(curr_state))
