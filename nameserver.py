@@ -36,7 +36,7 @@ class NameServer:
 
         message = {
             'topic': 'ENERGY_CONSUMPTION',
-            'time': datetime.now(),
+            'time': datetime.now().strftime('%Y/%m/%d %H:%M'),
             'consumption': 0.0
         }
 
@@ -45,7 +45,7 @@ class NameServer:
                 d1_consumption = d1.loc[d1['Electricity.Timestep'] == timestep]
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
-                message['time'] = d1_consumption['Time']
+                message['time'] = datetime.strftime(d1_consumption['Time'], '%Y/%m/%d %H:%M')
 
                 message['consumption'] = float(d1_consumption['Sum [kWh]'])
                 self._send_message(server_agent, alice_addr, alias='consumption', message=message)

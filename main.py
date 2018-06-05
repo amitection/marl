@@ -28,7 +28,7 @@ def energy_request_handler(agent, message):
     curr_state = copy.deepcopy(g_agent_state)
 
     # update with new values of energy consumption and generation
-    curr_state.time = message['time']
+    curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
     # amount of requested energy
     energy_req = message['energy']
@@ -89,7 +89,7 @@ def energy_consumption_handler(agent, message):
     curr_state = copy.deepcopy(g_agent_state)
 
     # update with new values of energy consumption and generation
-    curr_state.time = message['time']
+    curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
     curr_state.energy_consumption = message['consumption']
     curr_state.energy_generation = message['generation']
     curr_state.environment_state.set_total_consumed(message['consumption'])
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         #global rl_agent
 
         # Declare a agent state and make it global
-        environment_state = EnvironmentState(0.0, 0.0)
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
         global g_agent_state
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = 0.0, time = datetime.now(), environment_state = environment_state)

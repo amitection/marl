@@ -5,3 +5,4 @@ p2.log
 feat_extractor.pyc
 marlagent/*.pyc
 *.pyc
+assets/ns.pid
