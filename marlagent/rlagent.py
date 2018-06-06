@@ -115,7 +115,7 @@ class RLAgent:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
 
         # Write weights into a file to observe learning
-        print(self.weights)
+        # print(self.weights)
 
 
     def get_policy(self, state, actions):
@@ -149,7 +149,6 @@ class RLAgent:
         :param action:
         :return: the next state on taking the action
         '''
-
         next_state = copy.deepcopy(state)
         time_str = util.cnv_datetime_to_str(state.time, '%Y/%m/%d %H:%M')
         if action['action'] == 'consume_and_store':
@@ -165,9 +164,11 @@ class RLAgent:
         if action['action'] == 'request_ally':
             # TODO think about what to do if ally does not serve request
             diff = (state.energy_generation + state.battery_curr) - state.energy_consumption
+            agent.log_info("---------Energy Diff: "+str(diff))
             energy_grant = 0.0
             if diff < 0.0:
-                energy_grant = agent_actions.request_ally(ns, agent, allies, energy_amt = abs(diff), time = time_str)
+                energy_grant = agent_actions.request_ally(ns=ns, agent=agent, allies=allies, energy_amt = abs(diff), time = time_str)
+                # energy_grant = abs(diff)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
                 next_state.environment_state.set_energy_borrowed_from_ally(energy_grant)
@@ -215,7 +216,6 @@ class RLAgent:
 
         if action['action'] == 'deny_request':
             pass
-
 
         return next_state
 

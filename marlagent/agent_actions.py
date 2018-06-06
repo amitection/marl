@@ -1,3 +1,5 @@
+from osbrain import NSProxy
+
 def update_battery_status(battery_max, battery_curr, amount):
     '''
     Update the battery status
@@ -25,8 +27,12 @@ def update_battery_status(battery_max, battery_curr, amount):
 
 
 def request_ally(ns, agent, allies, energy_amt, time):
-    ally = ns.proxy(allies[0])
-    ally_addr = ally.addr(alias='energy_request')
+    ally_proxy = ns.proxy(name = allies[0], timeout=1.0)
+    agents = ns.agents()
+    agent.log_info("AGENTSSSS__-------------:"+str(agents))
+    agent.log_info(ally_proxy.ping())
+
+    ally_proxy_addr = ally_proxy.addr(alias='energy_request')
 
     message = {
         'topic': 'ENERGY_REQUEST',
@@ -34,7 +40,8 @@ def request_ally(ns, agent, allies, energy_amt, time):
         'energy': energy_amt
     }
 
-    resp = send_message(server_agent = agent, client_addr = ally_addr, alias = 'energy_request', message = message)
+    agent.log_info("Contacting ally to for: %"%message)
+    resp = send_message(server_agent = agent, client_addr = ally_proxy_addr, alias = 'energy_request', message = message)
 
     if resp['topic'] != 'ENERGY_REQUEST_DECLINE':
         return resp['energy']
@@ -42,7 +49,7 @@ def request_ally(ns, agent, allies, energy_amt, time):
         return float(0.0)
 
 
-def energy_transaction(self,state, next_state, borrowed_energy):
+def energy_transaction(state, next_state, borrowed_energy):
     energy_bal = get_energy_balance(state)
 
     if energy_bal > 0:
@@ -62,11 +69,11 @@ def energy_transaction(self,state, next_state, borrowed_energy):
         return next_state
 
 
-def get_energy_balance(self, state):
+def get_energy_balance(state):
     return (state.energy_generation + state.battery_curr) - state.energy_consumption
 
 
-def send_message(self, server_agent, client_addr, alias,  message):
+def send_message(server_agent, client_addr, alias,  message):
     server_agent.connect(client_addr, alias=alias)
     server_agent.send(alias, message=message)
     reply = server_agent.recv(alias)

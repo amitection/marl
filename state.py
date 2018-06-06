@@ -21,7 +21,7 @@ class AgentState:
         self.name = name
         self.energy_consumption = energy_consumption
         self.energy_generation = energy_generation
-        self.battery_max = 280
+        self.battery_max = 0.280
         self.battery_curr = battery_curr
         self.time = time
 
