@@ -62,7 +62,7 @@ def energy_transaction(state, next_state, borrowed_energy):
         if borrowed_energy > 0.0:
             next_state.energy_consumption = next_state.energy_consumption - borrowed_energy
 
-        return next_state
+    return next_state
 
 
 def get_energy_balance(state):
