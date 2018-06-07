@@ -28,16 +28,19 @@ def exit_check(msg):
 
 def energy_request_handler(agent, message):
 
-    agent.log_info('Received: %s' % message)
+    lock.acquire()
 
     # Acquire the lock
     lock_count = 0
-    while not lock.acquire():
-        if lock_count <= 2:
-            time.sleep(randint(1, 10) / 10)
-            lock_count += 1
-        else:
-            return {'topic': 'ENERGY_REQUEST_DECLINE'}
+    # while not lock.acquire():
+    #     if lock_count <= 2:
+    #         time.sleep(randint(1, 10) / 10)
+    #         lock_count += 1
+    #     else:
+    #         return {'topic': 'ENERGY_REQUEST_DECLINE'}
+
+    print("-----------------------Start Transaction-----------------------")
+    agent.log_info('Received: %s' % message)
 
     agent.log_info("Deepy copy of global state initiated...")
     curr_state = copy.deepcopy(g_agent_state)
@@ -52,10 +55,10 @@ def energy_request_handler(agent, message):
         'action': 'deny_request',
         'data': energy_req
     },
-    {
-        'action': 'grant',
-        'data': energy_req
-    }
+        {
+            'action': 'grant',
+            'data': energy_req
+        }
     ]
 
     # call get action with this new state
@@ -68,7 +71,7 @@ def energy_request_handler(agent, message):
         yield {'topic':'ENERGY_REQUEST_DECLINE'}
 
     # perform action and update global agent state
-    next_state, energy_grant = rl_agent.do_action(curr_state, action, allies)
+    next_state, energy_grant = rl_agent.do_action(curr_state, action, ns, agent, allies)
 
     # if energy request is accepted
     if action['action'] != 'deny_request':
@@ -89,13 +92,12 @@ def energy_request_handler(agent, message):
 
     agent.log_info('Completed update operation. Resting!')
 
+    print("-----------------------End of Transaction-----------------------\n\n\n")
     # Release the lock
     lock.release()
 
 
 def energy_consumption_handler(agent, message):
-
-    agent.log_info('Received: %s' % message)
     yield {'topic': 'Ok'}  # immediate reply
 
     _thread.start_new_thread(invoke_agent_ec_handle, (agent, ns, message))
@@ -104,6 +106,9 @@ def energy_consumption_handler(agent, message):
 def invoke_agent_ec_handle(agent, ns, message):
     # Acquire the lock
     lock.acquire()
+
+    print("-----------------------Start Transaction-----------------------")
+    agent.log_info('Received: %s' % message)
 
     # Exit check
     if exit_check(message):
@@ -150,6 +155,7 @@ def invoke_agent_ec_handle(agent, ns, message):
     finally:
         # Release the lock
         lock.release()
+        print("-----------------------End of Transaction-----------------------\n\n\n")
 
 
 def predict_energy_generation(time):
@@ -233,7 +239,7 @@ if __name__ == '__main__':
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = ns.addr(), serializer='json', transport='tcp')
-        agent.bind('REP', alias='energy_request', handler=energy_request_handler)
+        agent.bind('REP', alias=str('energy_request_'+args.agentname), handler=energy_request_handler)
         agent.bind('REP', alias='consumption', handler=energy_consumption_handler)
 
         if is_name_server_host:

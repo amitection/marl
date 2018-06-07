@@ -37,10 +37,6 @@ class NameServer:
         alice_addr = alice.addr(alias='consumption')
         bob_addr = bob.addr(alias='consumption')
 
-        alice_addr_req = alice.addr(alias='energy_request')
-        server_agent.log_info("Alice ENERGY REQ"+str(alice_addr_req))
-        server_agent.log_info("Alice Consumption"+str(alice_addr))
-
         message = {
             'topic': 'ENERGY_CONSUMPTION',
             'time': datetime.now().strftime('%Y/%m/%d %H:%M'),
@@ -81,4 +77,4 @@ class NameServer:
         server_agent.send(alias, message=message)
         reply = server_agent.recv(alias)
         server_agent.log_info("Recieved: "+str(reply))
-        #server_agent.close(alias=alias)
+        server_agent.close(alias=alias)

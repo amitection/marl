@@ -212,10 +212,11 @@ class RLAgent:
 
             # A more complex case can be designed where it gives partial energy
 
-            return next_state, energy_grant
+            return (next_state, energy_grant)
 
         if action['action'] == 'deny_request':
-            pass
+            energy_grant = 0.0
+            return (next_state, energy_grant)
 
         return next_state
 
