@@ -147,6 +147,8 @@ def invoke_agent_ec_handle(agent, ns, message):
         g_agent_state.battery_curr = next_state.battery_curr
         g_agent_state.environment_state = next_state.environment_state
 
+        agent.log_info(g_agent_state)
+        agent.log_info(g_agent_state.environment_state)
         agent.log_info('Completed update operation. Resting!')
 
     except Exception:

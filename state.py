@@ -93,6 +93,18 @@ class AgentState:
         return score
 
 
+    def __str__(self):
+        str_rep = """
+        Time: {0}
+        Energy Generation: {1}
+        Energy Consumption {2}
+        Battery Current: {3}
+        Battery Max: {4}
+        """.format(self.time, self.energy_generation, self.energy_consumption, self.battery_curr, self.battery_max)
+
+        return str_rep
+
+
 class EnvironmentState:
     """
     Maintains the state of the environment
@@ -127,3 +139,13 @@ class EnvironmentState:
 
     def set_energy_borrowed_from_ally(self, energy):
         self.energy_borrowed_from_ally = self.energy_borrowed_from_ally + energy
+
+    def __str__(self):
+        str_rep = """
+        Total Generated: {0}
+        Total Consumed: {1}
+        Total Borrowed From CG: {2}
+        Total Borrowed From Allies: {3}
+        """.format(self.total_generated, self.total_consumed, self.central_grid, self.energy_borrowed_from_ally)
+
+        return str_rep
