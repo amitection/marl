@@ -85,7 +85,7 @@ class AgentState:
         # overall impact of the agent on the environment
         if (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
                 >= (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
-            score += 10
+            score += 20
         elif (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
                 < (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
             score -= 10

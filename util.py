@@ -31,7 +31,7 @@ def get_generation(ts, consumption):
         if flip_coin(0.7):
             generation += consumption + consumption*(0.5)
         else:
-            generation = consumption
+            generation = consumption - consumption*(0.1)
 
     return generation
 

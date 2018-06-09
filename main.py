@@ -9,7 +9,6 @@ import traceback
 import time
 import copy
 from threading import Lock
-from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
 from marlagent.rlagent import RLAgent
