@@ -26,7 +26,7 @@ class NameServer:
 
     def schedule_job(self, server_agent):
         d1 = self._load_data("assets/house1_consumption.csv")
-        d2 = self._load_data("assets/house1_consumption.csv")
+        d2 = self._load_data("assets/house2_consumption.csv")
 
         # extracting the list of agents
         agents = self.ns.agents()
