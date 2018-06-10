@@ -26,12 +26,13 @@ def update_battery_status(battery_max, battery_curr, amount):
     return new_batt_status
 
 
-def request_ally(ns, agent, allies, energy_amt, time):
+def request_ally(ns, agent, agent_name, allies, energy_amt, time):
     ally_proxy = ns.proxy(name = allies[0], timeout=1.0)
     ally_proxy_addr = ally_proxy.addr(alias=str('energy_request_'+allies[0]))
 
     message = {
         'topic': 'ENERGY_REQUEST',
+        'agentName':agent_name,
         'time': time,
         'energy': energy_amt
     }
@@ -45,22 +46,11 @@ def request_ally(ns, agent, allies, energy_amt, time):
         return float(0.0)
 
 
-def energy_transaction(state, next_state, borrowed_energy):
-    energy_bal = get_energy_balance(state)
+def energy_transaction(next_state):
 
-    if energy_bal > 0:
-        next_state.energy_consumption = 0.0
-        next_state.energy_generation = 0.0
-        next_state.battery_curr = update_battery_status(state.battery_max, state.battery_curr,
-                                                                      state.energy_generation - state.energy_consumption)
-
-    else:
-        next_state.energy_generation = 0.0
-        next_state.battery_curr = 0.0
-        next_state.energy_consumption = abs(energy_bal)
-
-        if borrowed_energy > 0.0:
-            next_state.energy_consumption = next_state.energy_consumption - borrowed_energy
+    next_state.energy_consumption = 0.0
+    next_state.energy_generation = 0.0
+    next_state.battery_curr = 0.0
 
     return next_state
 

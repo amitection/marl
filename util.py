@@ -25,6 +25,7 @@ def cnv_datetime_to_str(time, format):
     # date = datetime.strptime(time, '%Y-%m-%d %H:%M')
     return time.strftime(format)
 
+
 def get_generation(ts, consumption):
     generation = 0.0
     if ts.time().hour < 18 and ts.time().hour > 6:
@@ -34,6 +35,19 @@ def get_generation(ts, consumption):
             generation = consumption - consumption*(0.1)
 
     return generation
+
+
+def get_reward_for_action(action):
+    action_reward_dict = {
+        'request_ally' : 10,
+        'request_grid': -1,
+        'grant': 10,
+        'deny_request': 0,
+        'consume_and_store': 1,
+    }
+
+    return action_reward_dict[action]
+
 
 class Counter(dict):
     """

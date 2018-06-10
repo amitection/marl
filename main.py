@@ -8,6 +8,8 @@ import sys
 import traceback
 import time
 import copy
+import _thread
+import util
 from threading import Lock
 from state import AgentState, EnvironmentState
 from datetime import datetime
@@ -16,7 +18,8 @@ from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
 from nameserver import NameServer
-import _thread
+from cghandler import httpservice
+
 
 pidfile = "assets/ns.pid"
 
@@ -70,22 +73,25 @@ def energy_request_handler(agent, message):
         yield {'topic':'ENERGY_REQUEST_DECLINE'}
 
     # perform action and update global agent state
-    next_state, energy_grant = rl_agent.do_action(curr_state, action, ns, agent, allies)
+    next_state, energy_grant = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
 
     # if energy request is accepted
     if action['action'] != 'deny_request':
         yield {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
+        _thread.start_new_thread(cg_http_service.register_transaction, (message['time'],
+                                                                       message['agentName'],
+                                                                       energy_grant))
 
     # calculate reward
-    delta_reward = next_state.get_score() - curr_state.get_score()
+    delta_reward = next_state.get_score() - curr_state.get_score() + util.get_reward_for_action(action['action'])
 
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
     rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
 
     # update the global state
-    g_agent_state.energy_consumption = next_state.energy_consumption
-    g_agent_state.energy_generation = next_state.energy_generation
+    g_agent_state.energy_consumption = 0.0
+    g_agent_state.energy_generation = 0.0
     g_agent_state.battery_curr = next_state.battery_curr
     g_agent_state.environment_state = next_state.environment_state
 
@@ -125,28 +131,32 @@ def invoke_agent_ec_handle(agent, ns, message):
         curr_state.environment_state.set_total_consumed(message['consumption'])
         curr_state.environment_state.set_total_generated(message['generation'])
 
+        _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
+                                                                        message['consumption'],
+                                                                        message['generation']))
+
         # call get action with this new state
         action = rl_agent.get_action(copy.deepcopy(curr_state))
 
         agent.log_info('Performing action (%s).' % action)
         # perform action and update global agent state
-        next_state = rl_agent.do_action(curr_state, action, ns, agent, allies)
+        next_state = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
 
         agent.log_info('Action complete. Calculating reward.')
         # calculate reward
-        delta_reward = next_state.get_score() - curr_state.get_score()
+        delta_reward = next_state.get_score() - curr_state.get_score() + util.get_reward_for_action(action['action'])
 
         agent.log_info('Updating agent with reward %s.' % delta_reward)
         # update agent with reward
         rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
 
         # update the global state
-        g_agent_state.energy_consumption = next_state.energy_consumption
-        g_agent_state.energy_generation = next_state.energy_generation
+        g_agent_state.energy_consumption = 0.0
+        g_agent_state.energy_generation = 0.0
         g_agent_state.battery_curr = next_state.battery_curr
         g_agent_state.environment_state = next_state.environment_state
 
-        agent.log_info(g_agent_state)
+        agent.log_info(next_state)
         agent.log_info(g_agent_state.environment_state)
         agent.log_info('Completed update operation. Resting!')
 
@@ -208,6 +218,7 @@ if __name__ == '__main__':
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
     parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
 
+    global args
     args = parser.parse_args()
 
     print("Hi! I am "+args.agentname+". I am taking command of this process.")
@@ -221,6 +232,9 @@ if __name__ == '__main__':
     global lock_count
     lock_count = 0
 
+    global cg_http_service
+    cg_http_service = httpservice.CGHTTPHandler(args.agentname)
+
     try:
         from osbrain.logging import pyro_log
         pyro_log()
@@ -233,7 +247,8 @@ if __name__ == '__main__':
         environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
         global g_agent_state
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
-                                   battery_curr = 0.0, time = datetime.now(), environment_state = environment_state)
+                                   battery_curr = 0.0, time = datetime.now(), environment_state = environment_state,
+                                   cg_http_service = cg_http_service)
 
         global allies
         allies = [ally for ally in args.allies.split(",") ]

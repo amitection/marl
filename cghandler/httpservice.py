@@ -1,11 +1,12 @@
 import requests
+import json
 
-class HTTPHandler:
+class CGHTTPHandler:
 
     def __init__(self, agent_name):
         self.agent_name = agent_name
-
         self._register_agent()
+
 
     def _register_agent(self):
         print("Registering Agent with Central Monitor...")
@@ -17,21 +18,21 @@ class HTTPHandler:
         }
 
         response = requests.post(url=url, json=data)
-        self.agent_id = response.content['id']
+        self.agent_id = json.loads(response.content)['id']
 
 
-    def update_energy_status(self, ts, energy_consumption, energy_generation):
+    def update_energy_status(self, time, energy_consumption, energy_generation):
 
         url = 'http://localhost:8080/energy/status'
 
         data = {
-            "timestamp": ts,
+            "timestamp": time,
             "agentId": self.agent_id,
             "energyGeneration": energy_consumption,
             "energyConsumption": energy_generation
         }
 
-        response = requests.put(url=url, data=data)
+        response = requests.put(url=url, json=data)
 
         if response.status_code == 200:
             print("Energy status updated successfully with central grid.")
@@ -39,12 +40,12 @@ class HTTPHandler:
             print("ERROR: %s"%response.content)
 
 
-    def register_transaction(self, ts, buyer_name, amount):
+    def register_transaction(self, time, buyer_name, amount):
 
         url = 'http://localhost:8080/energy/trasaction'
 
         data = {
-            "timestamp": ts,
+            "timestamp": time,
             "sellerId": self.agent_id,
             "buyer_name": buyer_name,
             "price": 0.5,
@@ -69,3 +70,18 @@ class HTTPHandler:
         else:
             print("ERROR: Error retrieving grid energy status. %s"%response.content)
             return None
+
+
+instance = False
+cg_http_handler = None
+
+def get_CG_serivce_instance(agent_name):
+
+    global instance
+    if not instance:
+        global cg_http_handler
+        cg_http_handler = CGHTTPHandler(agent_name)
+        instance = True
+        return cg_http_handler
+    else:
+        return cg_http_handler

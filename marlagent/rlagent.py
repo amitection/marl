@@ -142,7 +142,7 @@ class RLAgent:
         return legal_actions
 
 
-    def do_action(self, state, action, ns, agent, allies):
+    def do_action(self, state, action, ns, agent, agent_name, allies):
         '''
         Perform an action and return the next state
         :param state:
@@ -167,7 +167,7 @@ class RLAgent:
             agent.log_info("---------Energy Diff: "+str(diff))
             energy_grant = 0.0
             if diff < 0.0:
-                energy_grant = agent_actions.request_ally(ns=ns, agent=agent, allies=allies, energy_amt = abs(diff), time = time_str)
+                energy_grant = agent_actions.request_ally(ns=ns, agent=agent, agent_name = agent_name, allies=allies, energy_amt = abs(diff), time = time_str)
                 # energy_grant = abs(diff)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
@@ -180,6 +180,7 @@ class RLAgent:
                 if next_state.energy_consumption > 0:
                     self.central_grid[time_str] = next_state.energy_consumption
                     next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time_str])
+                    #next_state.energy_consumption = 0.0
 
             else:
                 print("Ally not requested as enough energy available in battery.")
@@ -189,10 +190,14 @@ class RLAgent:
 
 
         if action['action'] == 'request_grid':
+            # calculate the energy difference
+            energy_diff = abs(agent_actions.get_energy_balance(state))
+            self.central_grid[time_str] = energy_diff
 
-            self.central_grid[time_str] =  agent_actions.get_energy_balance(state)
-            next_state = agent_actions.energy_transaction(state, next_state, self.central_grid[time_str])
-            next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time_str])
+            next_state.energy_consumption = 0.0
+            next_state.energy_generation = 0.0
+            next_state.battery_curr = 0.0
+            next_state.environment_state.set_energy_borrowed_from_CG(energy_diff)
 
 
         if action['action'] == 'grant':

@@ -1,4 +1,4 @@
-import copy
+from cghandler import httpservice
 
 class AgentState:
     """
@@ -16,7 +16,8 @@ class AgentState:
 
     actions = ['request_ally', 'request_grid', 'grant', 'deny_request', 'consume_and_store']
 
-    def __init__(self, name, energy_consumption, energy_generation, battery_curr, time, environment_state):
+    def __init__(self, name, energy_consumption, energy_generation, battery_curr, time, environment_state,
+                 cg_http_service):
         print("registering state...")
         self.name = name
         self.energy_consumption = energy_consumption
@@ -26,6 +27,7 @@ class AgentState:
         self.time = time
 
         self.environment_state = environment_state
+        self.cg_http_service = cg_http_service
 
 
     def get_possible_actions(self, actions = None):
@@ -37,7 +39,7 @@ class AgentState:
 
         if actions is None:
 
-            if(self.energy_generation > self.energy_consumption):
+            if(self.energy_generation + self.battery_curr > self.energy_consumption):
                 possible_actions.append({'action':'consume_and_store', 'data':None})
             else:
                 possible_actions.append({'action':'request_ally', 'data':None})
@@ -89,6 +91,11 @@ class AgentState:
         elif (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
                 < (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
             score -= 10
+
+
+        # Add global state information
+        community_status = self.cg_http_service.get_energy_status()
+
 
         return score
 
