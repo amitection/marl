@@ -217,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--agentname', required=True, help='Name of the agent')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
     parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
+    parser.add_argument('--battInit', required=True, help='Initial battery charge.')
 
     global args
     args = parser.parse_args()
@@ -247,7 +248,7 @@ if __name__ == '__main__':
         environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
         global g_agent_state
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
-                                   battery_curr = 0.0, time = datetime.now(), environment_state = environment_state,
+                                   battery_curr = float(args.battInit), time = datetime.now(), environment_state = environment_state,
                                    cg_http_service = cg_http_service)
 
         global allies
