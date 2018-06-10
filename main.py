@@ -79,7 +79,7 @@ def energy_request_handler(agent, message):
     # calculate reward
     delta_reward = next_state.get_score() - curr_state.get_score()
 
-    agent.log_info('Updating agent with reward %s.' % delta_reward)
+    agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
     rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
 

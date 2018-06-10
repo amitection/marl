@@ -79,7 +79,7 @@ class AgentState:
             score -= 10
 
         # if there is remaining charge in the battery
-        if self.battery_curr > 0:
+        if self.battery_curr > 0.0:
             score += 10
 
         # overall impact of the agent on the environment
