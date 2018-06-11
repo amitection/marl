@@ -72,6 +72,26 @@ class CGHTTPHandler:
             return None
 
 
+    def log_iteration_status(self, env, nzeb_status):
+        url = 'http://localhost:8080/energy/log/iteration/status'
+
+        data = {
+            "agentId": self.agent_id,
+            "energyGeneration": env.get_total_generated(),
+            "energyConsumption": env.get_total_consumed(),
+            "energyBorrowedFromAlly": env.get_energy_borrowed_from_ally(),
+            "energyBorrowedFromCG": env.get_energy_borrowed_from_CG(),
+            "nzebStatus": nzeb_status
+        }
+
+        response = requests.post(url=url, json=data)
+
+        if response.status_code == 200:
+            print("Iteration status successfully logged to central grid.")
+        else:
+            print("ERROR: %s" % response.content)
+
+
 instance = False
 cg_http_handler = None
 

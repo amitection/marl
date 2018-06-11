@@ -106,7 +106,10 @@ def energy_request_handler(agent, message):
 def energy_consumption_handler(agent, message):
     yield {'topic': 'Ok'}  # immediate reply
 
-    _thread.start_new_thread(invoke_agent_ec_handle, (agent, ns, message))
+    if message['topic'] != 'ENERGY_CONSUMPTION':
+        _thread.start_new_thread(invoke_agent_ec_handle, (agent, ns, message))
+    elif message['topic'] != 'END_OF_ITERATION':
+        _thread.start_new_thread(eoi_handle, (agent, message))
 
 
 def invoke_agent_ec_handle(agent, ns, message):
@@ -168,6 +171,30 @@ def invoke_agent_ec_handle(agent, ns, message):
         # Release the lock
         lock.release()
         print("-----------------------End of Transaction-----------------------\n\n\n")
+
+
+def eoi_handle(agent, message):
+    '''
+    End of iteration handler.
+    :return:
+    '''
+    agent.log_info("-----------------------Iteration (%s) Completed-----------------------\n\n\n"%message['iter'])
+    agent.log_info("Publishing Stats...")
+    g_env_state = g_agent_state.environment_state
+    agent.log_info(g_env_state)
+
+    nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
+                  - (g_env_state.get_total_consumed() + g_env_state.get_energy_borrowed_from_CG())
+    agent.log_info("NZEB Status: %s" % nzeb_status)
+
+    # Log EOI details to CG
+    cg_http_service.log_iteration_status(g_env_state, nzeb_status)
+
+    # update the global state
+    g_agent_state.energy_consumption = 0.0
+    g_agent_state.energy_generation = 0.0
+    g_agent_state.battery_curr = args.battInit
+    g_agent_state.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
 
 
 def predict_energy_generation(time):
