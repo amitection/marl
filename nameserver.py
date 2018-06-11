@@ -59,6 +59,13 @@ class NameServer:
             self._send_message(server_agent, bob_addr, alias='consumption', message=message)
             time.sleep(3)
 
+
+        # Exit Message after iterations done
+        # Safe shutdown of all agents for testing
+        self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
+        self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
+        
+
     def dispatch_energy_data(self, server_agent, d1, d2, message, alice_addr, bob_addr):
 
         try:
