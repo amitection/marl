@@ -74,6 +74,7 @@ class RLAgent:
             action_value_pair.append((action, self.get_qValue(state, action)))
 
         # Returning the action with maximum q_value
+        #TODO: if q values for multiple action value pairs is the same it picks the first one. Need to randomize this selection
         return max(action_value_pair, key=lambda x: x[1])[0]
 
 
@@ -209,7 +210,7 @@ class RLAgent:
                 energy_grant = energy_request
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
-                                                                              (state.energy_generation - energy_request))
+                                                                              -energy_grant)
             elif(bal < 0):
                 energy_grant = (state.energy_generation + state.battery_curr)
                 next_state.energy_generation = 0.0

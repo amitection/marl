@@ -53,12 +53,13 @@ def energy_request_handler(agent, message):
     # amount of requested energy
     energy_req = message['energy']
 
-    actions = [{
-        'action': 'deny_request',
-        'data': energy_req
-    },
+    actions = [
         {
             'action': 'grant',
+            'data': energy_req
+        },
+        {
+            'action': 'deny_request',
             'data': energy_req
         }
     ]

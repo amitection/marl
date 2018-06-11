@@ -60,8 +60,6 @@ def get_energy_balance(state):
 
 
 def send_message(agent, server_addr, alias,  message):
-    agent.log_info('My Addr---------:%s'%agent)
-    agent.log_info('Server Addr---------:%s'%server_addr)
     agent.connect(server=server_addr, alias=alias)
     agent.send(alias, message=message)
     reply = agent.recv(alias)

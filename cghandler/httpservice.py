@@ -47,7 +47,7 @@ class CGHTTPHandler:
         data = {
             "timestamp": time,
             "sellerId": self.agent_id,
-            "buyer_name": buyer_name,
+            "buyerName": buyer_name,
             "price": 0.5,
             "amount": amount
         }
