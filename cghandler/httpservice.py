@@ -72,10 +72,11 @@ class CGHTTPHandler:
             return None
 
 
-    def log_iteration_status(self, env, nzeb_status):
+    def log_iteration_status(self, iter, env, nzeb_status):
         url = 'http://localhost:8080/energy/log/iteration/status'
 
         data = {
+            "iteration": iter,
             "agentId": self.agent_id,
             "energyGeneration": env.get_total_generated(),
             "energyConsumption": env.get_total_consumed(),

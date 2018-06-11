@@ -46,17 +46,18 @@ class NameServer:
         }
 
         for iter in range(50):
-            self.dispatch_energy_data(server_agent, d1, d2, message, alice_addr, bob_addr)
+            last_message = self.dispatch_energy_data(server_agent, d1, d2, message, alice_addr, bob_addr)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
             eoi_message = {
                 'topic': 'END_OF_ITERATION',
-                'iter': iter
+                'iter': iter,
+                'time': last_message['time']
             }
 
             # notify each agent to save its status at the end of each iteration
-            self._send_message(server_agent, alice_addr, alias='consumption', message=message)
-            self._send_message(server_agent, bob_addr, alias='consumption', message=message)
+            self._send_message(server_agent, alice_addr, alias='consumption', message=eoi_message)
+            self._send_message(server_agent, bob_addr, alias='consumption', message=eoi_message)
             time.sleep(3)
 
 
@@ -64,7 +65,7 @@ class NameServer:
         # Safe shutdown of all agents for testing
         self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
         self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
-        
+
 
     def dispatch_energy_data(self, server_agent, d1, d2, message, alice_addr, bob_addr):
 
@@ -91,10 +92,7 @@ class NameServer:
         except Exception:
             print(traceback.format_exc())
 
-        finally:
-            # Safe shutdown of all agents for testing
-            self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
-            self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
+        return message
 
 
     def _send_message(self, server_agent, client_addr, alias,  message):

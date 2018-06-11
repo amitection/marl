@@ -30,6 +30,8 @@ def exit_check(msg):
 
 def energy_request_handler(agent, message):
 
+    global g_agent_state
+
     lock.acquire()
 
     # Acquire the lock
@@ -106,23 +108,28 @@ def energy_request_handler(agent, message):
 def energy_consumption_handler(agent, message):
     yield {'topic': 'Ok'}  # immediate reply
 
-    if message['topic'] != 'ENERGY_CONSUMPTION':
+    # Exit check
+    if exit_check(message):
+        sys.exit(0)
+
+    global ns
+
+    if message['topic'] == 'ENERGY_CONSUMPTION':
         _thread.start_new_thread(invoke_agent_ec_handle, (agent, ns, message))
-    elif message['topic'] != 'END_OF_ITERATION':
+
+    elif message['topic'] == 'END_OF_ITERATION':
         _thread.start_new_thread(eoi_handle, (agent, message))
 
 
 def invoke_agent_ec_handle(agent, ns, message):
+
+    global g_agent_state
+    print("Trying to acquire lock!")
     # Acquire the lock
     lock.acquire()
 
-    print("-----------------------Start Transaction-----------------------")
+    print("\n-----------------------Start Transaction-----------------------")
     agent.log_info('Received: %s' % message)
-
-    # Exit check
-    if exit_check(message):
-        lock.release()
-        sys.exit(0)
 
     try:
         agent.log_info("Deepy copy of global state initiated...")
@@ -170,7 +177,7 @@ def invoke_agent_ec_handle(agent, ns, message):
     finally:
         # Release the lock
         lock.release()
-        print("-----------------------End of Transaction-----------------------\n\n\n")
+        print("-----------------------End of Transaction-----------------------\n\n")
 
 
 def eoi_handle(agent, message):
@@ -178,24 +185,41 @@ def eoi_handle(agent, message):
     End of iteration handler.
     :return:
     '''
-    agent.log_info("-----------------------Iteration (%s) Completed-----------------------\n\n\n"%message['iter'])
-    agent.log_info("Publishing Stats...")
-    g_env_state = g_agent_state.environment_state
-    agent.log_info(g_env_state)
+    lock.acquire()
 
-    nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
-                  - (g_env_state.get_total_consumed() + g_env_state.get_energy_borrowed_from_CG())
-    agent.log_info("NZEB Status: %s" % nzeb_status)
+    try:
+        print("\n\n\-----------------------Iteration (%s) Completed-----------------------\n\n"%message['iter'])
+        agent.log_info("Publishing Stats...")
+        g_env_state = g_agent_state.environment_state
+        agent.log_info(g_env_state)
 
-    # Log EOI details to CG
-    cg_http_service.log_iteration_status(g_env_state, nzeb_status)
+        nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
+                      - (g_env_state.get_total_consumed() + g_env_state.get_energy_borrowed_from_CG())
+        agent.log_info("NZEB Status: %s" % nzeb_status)
 
-    # update the global state
-    g_agent_state.energy_consumption = 0.0
-    g_agent_state.energy_generation = 0.0
-    g_agent_state.battery_curr = args.battInit
-    g_agent_state.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
+        # Log EOI details to CG
+        cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
+        # Rewarding agent according to NZEB status
+        delta_reward = 40 - nzeb_status
+        g_agent_state_copy = copy.deepcopy(g_agent_state)
+        g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
+
+        action = {'action': 'consume_and_store'}
+        rl_agent.update(state=g_agent_state_copy, action=action, next_state=g_agent_state_copy,
+                        reward=delta_reward)
+
+        # reset the agent global state
+        g_agent_state.reset(float(args.battInit))
+        print(".......................RESETTING GLOBAL STATE.......................")
+        print(g_agent_state.environment_state)
+
+    except Exception:
+        print(traceback.format_exc())
+
+    finally:
+        # Release the lock
+        lock.release()
 
 def predict_energy_generation(time):
     print("TBD")
@@ -276,7 +300,7 @@ if __name__ == '__main__':
         environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
         global g_agent_state
         g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
-                                   battery_curr = float(args.battInit), time = datetime.now(), environment_state = environment_state,
+                                   battery_curr = float(args.battInit), time = '2014/01/01 12:00', environment_state = environment_state,
                                    cg_http_service = cg_http_service)
 
         global allies

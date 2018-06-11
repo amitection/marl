@@ -1,17 +1,8 @@
-from cghandler import httpservice
+from datetime import datetime
 
 class AgentState:
     """
-    Energy Consumption
-    Energy Generation
-    Energy consumption at t+1
-    Energy generation at t+1
-    Current storage (Scurr)
-    Smax - Scurr
-    Amount of Requested Energy
-    Hour of the day - 48
-    Day of the week
-    Month of the year
+    Class representing the agent's state at any given moment.
     """
 
     actions = ['request_ally', 'request_grid', 'grant', 'deny_request', 'consume_and_store']
@@ -58,20 +49,6 @@ class AgentState:
         return possible_actions
 
 
-    def get_successor_state(self, action):
-        """
-        Observe the state transition on the input action and return the next state.
-
-        :param state:
-        :param action:
-        :return: next state
-        """
-        #TODO
-
-
-        return self
-
-
     def get_score(self):
         score = 0.0
         # if it is in the positive state
@@ -98,6 +75,14 @@ class AgentState:
 
 
         return score
+
+
+    def reset(self, battery_init):
+        self.energy_consumption = 0.0
+        self.energy_generation = 0.0
+        self.battery_curr = battery_init
+        self.time =  datetime.strptime('2014/01/01 12:00', '%Y/%m/%d %H:%M')
+        self.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
 
 
     def __str__(self):
