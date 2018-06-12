@@ -9,6 +9,7 @@ import traceback
 import time
 import copy
 import _thread
+import math
 import util
 from threading import Lock
 from state import AgentState, EnvironmentState
@@ -208,7 +209,7 @@ def eoi_handle(agent, message):
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
         # Rewarding agent according to NZEB status
-        delta_reward = 40 + nzeb_status
+        delta_reward = 100 -  math.pow(nzeb_status, 2)
         g_agent_state_copy = copy.deepcopy(g_agent_state)
         g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
