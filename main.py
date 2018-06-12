@@ -19,6 +19,7 @@ from osbrain import run_nameserver
 from osbrain import NSProxy
 from nameserver import NameServer
 from cghandler import httpservice
+from prediction.energy_generation import EnergyGeneration
 
 
 pidfile = "assets/ns.pid"
@@ -135,16 +136,22 @@ def invoke_agent_ec_handle(agent, ns, message):
         agent.log_info("Deepy copy of global state initiated...")
         curr_state = copy.deepcopy(g_agent_state)
 
+
+
         # update with new values of energy consumption and generation
         curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
+
+        # Get energy generation
+        energy_generated = energy_generator.get_generation(curr_state.time)
+
         curr_state.energy_consumption = message['consumption']
-        curr_state.energy_generation = message['generation']
+        curr_state.energy_generation = energy_generated
         curr_state.environment_state.set_total_consumed(message['consumption'])
-        curr_state.environment_state.set_total_generated(message['generation'])
+        curr_state.environment_state.set_total_generated(energy_generated)
 
         _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
                                                                         message['consumption'],
-                                                                        message['generation']))
+                                                                        energy_generated))
 
         # call get action with this new state
         action = rl_agent.get_action(copy.deepcopy(curr_state))
@@ -201,7 +208,7 @@ def eoi_handle(agent, message):
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
         # Rewarding agent according to NZEB status
-        delta_reward = 40 - nzeb_status
+        delta_reward = 40 + nzeb_status
         g_agent_state_copy = copy.deepcopy(g_agent_state)
         g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
@@ -260,19 +267,27 @@ def start_server_job(ns):
     ns_agent.schedule_job(steve)
 
 
-if __name__ == '__main__':
-
-    print("Started process at ("+str(datetime.now())+")")
-
+def args_handler():
     parser = argparse.ArgumentParser(description='Agent Module')
 
     parser.add_argument('--agentname', required=True, help='Name of the agent')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
     parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
     parser.add_argument('--battInit', required=True, help='Initial battery charge.')
+    parser.add_argument('--solarexposure', required=False, help='Path to solar exposure dataset')
+    parser.add_argument('--nSolarPanel', required=True, help='Number fo solar panel this house has')
 
     global args
     args = parser.parse_args()
+
+    if args.solarexposure is None:
+        args.solarexposure = 'assets/toronto_solar_exp_2011.csv'
+
+
+if __name__ == '__main__':
+
+    print("Started process at ("+str(datetime.now())+")")
+    args_handler()
 
     print("Hi! I am "+args.agentname+". I am taking command of this process.")
 
@@ -295,6 +310,9 @@ if __name__ == '__main__':
         # instantiate reinforcement learning module and making it globally accessible
         global rl_agent
         rl_agent = RLAgent()
+
+        global energy_generator
+        energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))
 
         # Declare a agent state and make it global
         environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
