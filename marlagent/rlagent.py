@@ -1,6 +1,7 @@
 import util
 import random
 import copy
+import math
 import feat_extractor as fe
 from marlagent import agent_actions
 
@@ -91,8 +92,10 @@ class RLAgent:
         action = None
 
         if util.flip_coin(self.epsilon):
+            print("Randomizing action...")
             action = random.choice(legal_actions)
         else:
+            print("Selecting the best action based on policy...")
             action = self.get_policy(state, actions)
 
         return action
@@ -110,7 +113,7 @@ class RLAgent:
         """
         # TODO
         features = self.feat_extractor.get_features(state, action)
-        difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
+        difference = math.sinh(reward) + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
 
         for f_key in features:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
@@ -151,13 +154,24 @@ class RLAgent:
         :return: the next state on taking the action
         '''
         next_state = copy.deepcopy(state)
+        next_state.environment_state.update_total_consumed(state.energy_consumption)
+        next_state.environment_state.update_total_generated(state.energy_generation)
+
+        usable_generated_energy =  state.energy_generation
+
         time_str = util.cnv_datetime_to_str(state.time, '%Y/%m/%d %H:%M')
         if action['action'] == 'consume_and_store':
+
             diff = state.energy_generation - state.energy_consumption
 
-            # Store the excess
-            next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
+            # Store the unused energy and return the excess
+            batt_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
 
+            # Subtract the energy which could not be used
+            next_state.environment_state.set_total_generated(next_state.environment_state.get_total_generated() - excess)
+            usable_generated_energy = usable_generated_energy - excess
+
+            next_state.battery_curr = batt_curr
             next_state.energy_generation = 0.0
             next_state.energy_consumption = 0.0
 
@@ -172,7 +186,7 @@ class RLAgent:
                 # energy_grant = abs(diff)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
-                next_state.environment_state.set_energy_borrowed_from_ally(energy_grant)
+                next_state.environment_state.update_energy_borrowed_from_ally(energy_grant)
 
                 # TODO think how to handle energy consumption if
                 # If energy consumption is positive in next state then penalize agent
@@ -180,7 +194,7 @@ class RLAgent:
 
                 if next_state.energy_consumption > 0:
                     self.central_grid[time_str] = next_state.energy_consumption
-                    next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time_str])
+                    next_state.environment_state.update_energy_borrowed_from_CG(self.central_grid[time_str])
                     #next_state.energy_consumption = 0.0
 
             else:
@@ -198,7 +212,7 @@ class RLAgent:
             next_state.energy_consumption = 0.0
             next_state.energy_generation = 0.0
             next_state.battery_curr = 0.0
-            next_state.environment_state.set_energy_borrowed_from_CG(energy_diff)
+            next_state.environment_state.update_energy_borrowed_from_CG(energy_diff)
 
 
         if action['action'] == 'grant':
@@ -209,7 +223,7 @@ class RLAgent:
             if(bal >= 0):
                 energy_grant = energy_request
                 next_state.energy_generation = 0.0
-                next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
+                next_state.battery_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
                                                                               -energy_grant)
             elif(bal < 0):
                 energy_grant = (state.energy_generation + state.battery_curr)
@@ -224,6 +238,6 @@ class RLAgent:
             energy_grant = 0.0
             return (next_state, energy_grant)
 
-        return next_state
+        return (next_state, usable_generated_energy)
 
 

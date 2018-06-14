@@ -13,7 +13,7 @@ class AgentState:
         self.name = name
         self.energy_consumption = energy_consumption
         self.energy_generation = energy_generation
-        self.battery_max = 2.88
+        self.battery_max = 5.76
         self.battery_curr = battery_curr
         self.time = time
 
@@ -52,26 +52,26 @@ class AgentState:
     def get_score(self):
         score = 0.0
         # if it is in the positive state
-        if (self.energy_generation + self.battery_curr) >= self.energy_consumption:
-            score += 10
-        elif (self.energy_generation + self.battery_curr) < self.energy_consumption:
-            score -= 10
-
+        # if (self.energy_generation + self.battery_curr) >= self.energy_consumption:
+        #     score += 1
+        # elif (self.energy_generation + self.battery_curr) < self.energy_consumption:
+        #     score -= 10
+        #
         # if there is remaining charge in the battery
         if self.battery_curr > 0.0:
-            score += 10
+            score += 1.0
 
         # overall impact of the agent on the environment
         if (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
                 >= (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
-            score += 20
+            score += 1.0
         elif (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
                 < (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
-            score -= 10
+            score -= 1.0
 
 
         # Add global state information
-        community_status = self.cg_http_service.get_energy_status()
+        #community_status = self.cg_http_service.get_energy_status()
 
 
         return score
@@ -111,25 +111,28 @@ class EnvironmentState:
     def get_total_consumed(self):
         return self.total_consumed
 
-    def set_total_consumed(self, energy):
+    def update_total_consumed(self, energy):
         self.total_consumed = self.total_consumed + energy
 
     def get_total_generated(self):
         return self.total_generated
 
     def set_total_generated(self, energy):
+        self.total_generated = energy
+
+    def update_total_generated(self, energy):
         self.total_generated = self.total_generated + energy
 
     def get_energy_borrowed_from_CG(self):
         return self.central_grid
 
-    def set_energy_borrowed_from_CG(self, energy):
+    def update_energy_borrowed_from_CG(self, energy):
         self.central_grid = self.central_grid + energy
 
     def get_energy_borrowed_from_ally(self):
         return self.energy_borrowed_from_ally
 
-    def set_energy_borrowed_from_ally(self, energy):
+    def update_energy_borrowed_from_ally(self, energy):
         self.energy_borrowed_from_ally = self.energy_borrowed_from_ally + energy
 
     def __str__(self):

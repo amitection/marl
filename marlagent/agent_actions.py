@@ -8,6 +8,7 @@ def update_battery_status(battery_max, battery_curr, amount):
     :param amount:
     :return: the new current battery status
     '''
+    excess = 0
     battery_cap_left = battery_max - battery_curr
     new_batt_status = battery_curr
 
@@ -19,11 +20,13 @@ def update_battery_status(battery_max, battery_curr, amount):
 
     elif amount > 0.0 and battery_cap_left >= amount:
         new_batt_status += amount
+
     elif amount > 0.0 and battery_cap_left < amount:
         new_batt_status += battery_cap_left
+        excess = amount - battery_cap_left
 
     print("Battery status updated: %s." % new_batt_status)
-    return new_batt_status
+    return new_batt_status, excess
 
 
 def request_ally(ns, agent, agent_name, allies, energy_amt, time):

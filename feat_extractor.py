@@ -40,6 +40,7 @@ class FeatureExtractor:
         self.ohe_actions = OneHotEncoder(sparse=False)
         self.ohe_actions.fit(actions_trans.reshape(-1,1))
 
+
     def get_features(self, state, action):
         '''
         Compute the features from the state to extract the q-value
@@ -81,4 +82,5 @@ class FeatureExtractor:
         for i in range(len(features)):
             feat_dict['f_'+str(i)] = float(features[i])
 
+        print(feat_dict)
         return feat_dict

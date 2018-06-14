@@ -137,8 +137,6 @@ def invoke_agent_ec_handle(agent, ns, message):
         agent.log_info("Deepy copy of global state initiated...")
         curr_state = copy.deepcopy(g_agent_state)
 
-
-
         # update with new values of energy consumption and generation
         curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
@@ -147,19 +145,14 @@ def invoke_agent_ec_handle(agent, ns, message):
 
         curr_state.energy_consumption = message['consumption']
         curr_state.energy_generation = energy_generated
-        curr_state.environment_state.set_total_consumed(message['consumption'])
-        curr_state.environment_state.set_total_generated(energy_generated)
 
-        _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
-                                                                        message['consumption'],
-                                                                        energy_generated))
 
         # call get action with this new state
         action = rl_agent.get_action(copy.deepcopy(curr_state))
 
         agent.log_info('Performing action (%s).' % action)
         # perform action and update global agent state
-        next_state = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
+        next_state, usable_generated_energy = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
 
         agent.log_info('Action complete. Calculating reward.')
         # calculate reward
@@ -169,6 +162,11 @@ def invoke_agent_ec_handle(agent, ns, message):
         # update agent with reward
         rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
 
+
+        # Registering information to CG
+        _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
+                                                                        message['consumption'],
+                                                                        usable_generated_energy))
         # update the global state
         g_agent_state.energy_consumption = 0.0
         g_agent_state.energy_generation = 0.0
@@ -209,18 +207,41 @@ def eoi_handle(agent, message):
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
         # Rewarding agent according to NZEB status
-        delta_reward = 100 -  math.pow(nzeb_status, 2)
-        g_agent_state_copy = copy.deepcopy(g_agent_state)
-        g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
-        action = {'action': 'consume_and_store'}
-        rl_agent.update(state=g_agent_state_copy, action=action, next_state=g_agent_state_copy,
-                        reward=delta_reward)
+        # if nzeb_status >= 0:
+        #     delta_reward = 50 + nzeb_status
+        # else:
+        #     if nzeb_status <= -25:
+        #         delta_reward = -2
+        #
+        #     elif nzeb_status < -20:
+        #         delta_reward = -1.5
+        #
+        #     elif nzeb_status < -15:
+        #         delta_reward = -1.0
+        #
+        #     elif nzeb_status < -10:
+        #         delta_reward = -0.5
+        #
+        #     elif nzeb_status < -5:
+        #         delta_reward = 1
+        #
+        #     elif nzeb_status <= 0:
+        #         delta_reward = 2
+
+        # agent.log_info('Updating agent with reward %s.' % delta_reward)
+        #
+        # g_agent_state_copy = copy.deepcopy(g_agent_state)
+        # g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
+        #
+        # action = {'action': 'consume_and_store'}
+        # rl_agent.update(state=g_agent_state_copy, action=action, next_state=g_agent_state_copy,
+        #                 reward=delta_reward)
 
         # reset the agent global state
         g_agent_state.reset(float(args.battInit))
         print(".......................RESETTING GLOBAL STATE.......................")
-        print(g_agent_state.environment_state)
+        agent.log_info(g_agent_state.environment_state)
 
     except Exception:
         print(traceback.format_exc())

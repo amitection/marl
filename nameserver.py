@@ -71,7 +71,7 @@ class NameServer:
 
         try:
             #for timestep in range(1051230, 2103810, 30):
-            for timestep in range(0, 1500, 30):
+            for timestep in range(0, 4290, 30):
                 d1_consumption = d1.loc[d1['Electricity.Timestep'] == timestep]
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
@@ -87,7 +87,7 @@ class NameServer:
                     util.get_generation(d2_consumption['Time'].get(timestep), message['consumption']))
                 self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
-                time.sleep(1)
+                time.sleep(0.5)
 
         except Exception:
             print(traceback.format_exc())

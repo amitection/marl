@@ -39,11 +39,11 @@ def get_generation(ts, consumption):
 
 def get_reward_for_action(action):
     action_reward_dict = {
-        'request_ally' : 10,
-        'request_grid': -1,
-        'grant': 10,
-        'deny_request': 0,
-        'consume_and_store': 1,
+        'request_ally' : 1,
+        'request_grid': -0.5,
+        'grant': 1,
+        'deny_request': -0.5,
+        'consume_and_store': 0.5,
     }
 
     return action_reward_dict[action]
