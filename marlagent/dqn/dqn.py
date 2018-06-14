@@ -4,6 +4,7 @@ import random
 import torch
 import copy
 import torch.autograd as autograd
+import torch.optim as optim
 import torch.nn as nn
 from collections import namedtuple
 from marlagent.dqn.model import DQN
@@ -12,6 +13,7 @@ from feat_extractor import FeatureExtractor
 
 USE_CUDA = torch.cuda.is_available()
 dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+
 
 class Variable(autograd.Variable):
     def __init__(self, data, *args, **kwargs):
@@ -22,19 +24,23 @@ class Variable(autograd.Variable):
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
+optimizer_spec = OptimizerSpec(
+        constructor=optim.RMSprop,
+        kwargs=dict(lr=0.00025, alpha=0.95, eps=0.01),
+    )
+
+
 Statistic = {
     "mean_episode_rewards": [],
     "best_mean_episode_rewards": []
 }
 
 
-
 class LearningAgent():
 
     def __init__(self,
-                 n_features,
                  batch_size,
-                 optimizer_spec,
+                 n_features = 69,
                  gamma = 0.99,
                  target_update_freq = 100):
 

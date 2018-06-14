@@ -1,7 +1,8 @@
 import util
 import numpy as np
+from datetime import datetime
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from state import AgentState
+from state import AgentState, EnvironmentState
 
 class FeatureExtractor:
 
@@ -96,3 +97,22 @@ class FeatureExtractor:
         features.append(state.battery_curr)
 
         return features
+
+
+
+    def get_n_features(self):
+        '''
+        Simulates a fake agent state and returns the numbers of features.
+        :param state:
+        :return:
+        '''
+
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
+        fake_agent_state = AgentState(name='Test', energy_consumption=0.0, energy_generation=0.0,
+                                   battery_curr=float(5), time=datetime.now(),
+                                   environment_state=environment_state,
+                                   cg_http_service=None)
+
+        features = self.encode_state(fake_agent_state)
+
+        return len(features)
