@@ -49,20 +49,7 @@ class FeatureExtractor:
         :return: a list of feature values
         '''
 
-        time_feat = util.Counter()
-        time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
-        time_feat['dayofweek'] = state.time.weekday() # monday = 0
-        time_feat['month'] = state.time.month - 1
-
-        # Transform and avoid the dummy variable trap
-        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
-                                           .reshape(1, -1))[:, :-1]
-
-        features = list(features[0])
-
-        features.append(state.energy_consumption)
-        features.append(state.energy_generation)
-        features.append(state.battery_curr)
+        features = self.encode_state(state)
 
 
         # TODO Embed action as a feature into this
@@ -84,3 +71,28 @@ class FeatureExtractor:
 
         print(feat_dict)
         return feat_dict
+
+
+    def encode_state(self, state):
+        '''
+        Encode the state variable into n features
+        :param state:
+        :return:
+        '''
+
+        time_feat = util.Counter()
+        time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
+        time_feat['dayofweek'] = state.time.weekday()  # monday = 0
+        time_feat['month'] = state.time.month - 1
+
+        # Transform and avoid the dummy variable trap
+        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
+                                           .reshape(1, -1))[:, :-1]
+
+        features = list(features[0])
+
+        features.append(state.energy_consumption)
+        features.append(state.energy_generation)
+        features.append(state.battery_curr)
+
+        return features

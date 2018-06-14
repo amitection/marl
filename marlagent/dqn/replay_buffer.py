@@ -30,10 +30,31 @@ class ReplayBuffer:
         :return:
         """
         if self.states is None:
-            self.states = np.empty(([self.size], self.n_features), dtype=np.float32)
+            self.states = np.empty((self.size, self.n_features), dtype=np.float32)
             self.actions = np.empty([self.size], dtype=np.int32)
             self.rewards = np.empty([self.size], dtype=np.float32)
             self.done = np.empty([self.size], dtype=np.bool)
 
         self.states = np.append(arr=self.states, values = [state], axis = 0)
         self.rewards = np.append(arr=self.rewards, values=[reward], axis = 0)
+
+
+
+    def store_state(self, state_features):
+        """
+
+        :param state: the state included everything in my case. even the action
+        :param action:
+        :param reward:
+        :return:
+        """
+        if self.states is None:
+            self.states = np.empty((self.size, self.n_features), dtype=np.float32)
+            self.actions = np.empty([self.size], dtype=np.int32)
+            self.rewards = np.empty([self.size], dtype=np.float32)
+            self.done = np.empty([self.size], dtype=np.bool)
+
+        self.states[self.next_idx] = state_features
+        self.next_idx += 1
+
+        return self.next_idx - 1, self.states[self.next_idx - 1]
