@@ -34,7 +34,7 @@ def initiate_nameserver(ns_socket_addr):
 
 def start_server_job(osbrain_ns, agentname):
     time.sleep(3)
-    ns_agent = NameServer(osbrain_ns)
+    ns_agent = NameServer(osbrain_ns, agentname)
 
     # Start the scheduled job
     steve = run_agent(agentname, serializer='json')
