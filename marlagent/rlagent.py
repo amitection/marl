@@ -1,12 +1,13 @@
 import util
 import random
 import copy
+import math
 import feat_extractor as fe
 from marlagent import agent_actions
 
 class RLAgent:
 
-    def __init__(self, alpha=1.0, epsilon=0.05, gamma=0.8, numTraining = 10):
+    def __init__(self, alpha=0.001, epsilon=0.2, gamma=0.9, numTraining = 10):
 
         print("RL agent instantiated...")
         self.alpha = float(alpha) # learning rate
@@ -34,6 +35,8 @@ class RLAgent:
         for f_key in features:
             q_value = q_value + (features[f_key] * self.weights[f_key])
 
+        # print(features)
+        # print("Q - VALUE:::::%s"%q_value)
         return q_value
 
 
@@ -74,6 +77,7 @@ class RLAgent:
             action_value_pair.append((action, self.get_qValue(state, action)))
 
         # Returning the action with maximum q_value
+        #TODO: if q values for multiple action value pairs is the same it picks the first one. Need to randomize this selection
         return max(action_value_pair, key=lambda x: x[1])[0]
 
 
@@ -90,8 +94,10 @@ class RLAgent:
         action = None
 
         if util.flip_coin(self.epsilon):
+            print("Randomizing action...")
             action = random.choice(legal_actions)
         else:
+            print("Selecting the best action based on policy...")
             action = self.get_policy(state, actions)
 
         return action
@@ -109,12 +115,21 @@ class RLAgent:
         """
         # TODO
         features = self.feat_extractor.get_features(state, action)
-        difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
+        # difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
+        q_value_next_state = (self.discount * self.compute_value_from_qValues(next_state))
+        q_value_curr_state = self.get_qValue(state, action)
+        difference = reward + q_value_next_state - q_value_curr_state
+
+        # print("DISCOUNTED Q VALUE NEXT STATE:%s"%q_value_next_state)
+        # print("Q VALUE CURR STATE:%s" % q_value_curr_state)
+        print("CORRECTION-------------:%s"%difference)
+        self.write_to_file(data = difference, path_to_file = 'assets/'+state.name+'error.csv')
 
         for f_key in features:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
 
         # Write weights into a file to observe learning
+        # print("WEIGHTS---------------:")
         # print(self.weights)
 
 
@@ -142,7 +157,7 @@ class RLAgent:
         return legal_actions
 
 
-    def do_action(self, state, action, ns, agent, allies):
+    def do_action(self, state, action, ns, agent, agent_name, allies):
         '''
         Perform an action and return the next state
         :param state:
@@ -150,13 +165,24 @@ class RLAgent:
         :return: the next state on taking the action
         '''
         next_state = copy.deepcopy(state)
+        next_state.environment_state.update_total_consumed(state.energy_consumption)
+        next_state.environment_state.update_total_generated(state.energy_generation)
+
+        usable_generated_energy =  state.energy_generation
+
         time_str = util.cnv_datetime_to_str(state.time, '%Y/%m/%d %H:%M')
         if action['action'] == 'consume_and_store':
+
             diff = state.energy_generation - state.energy_consumption
 
-            # Store the excess
-            next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
+            # Store the unused energy and return the excess
+            batt_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
 
+            # Subtract the energy which could not be used
+            usable_generated_energy = usable_generated_energy - excess
+            next_state.environment_state.set_total_generated(next_state.environment_state.get_total_generated() - excess)
+
+            next_state.battery_curr = batt_curr
             next_state.energy_generation = 0.0
             next_state.energy_consumption = 0.0
 
@@ -167,11 +193,11 @@ class RLAgent:
             agent.log_info("---------Energy Diff: "+str(diff))
             energy_grant = 0.0
             if diff < 0.0:
-                energy_grant = agent_actions.request_ally(ns=ns, agent=agent, allies=allies, energy_amt = abs(diff), time = time_str)
+                energy_grant = agent_actions.request_ally(ns=ns, agent=agent, agent_name = agent_name, allies=allies, energy_amt = abs(diff), time = time_str)
                 # energy_grant = abs(diff)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
-                next_state.environment_state.set_energy_borrowed_from_ally(energy_grant)
+                next_state.environment_state.update_energy_borrowed_from_ally(energy_grant)
 
                 # TODO think how to handle energy consumption if
                 # If energy consumption is positive in next state then penalize agent
@@ -179,7 +205,8 @@ class RLAgent:
 
                 if next_state.energy_consumption > 0:
                     self.central_grid[time_str] = next_state.energy_consumption
-                    next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time_str])
+                    next_state.environment_state.update_energy_borrowed_from_CG(self.central_grid[time_str])
+                    #next_state.energy_consumption = 0.0
 
             else:
                 print("Ally not requested as enough energy available in battery.")
@@ -189,10 +216,14 @@ class RLAgent:
 
 
         if action['action'] == 'request_grid':
+            # calculate the energy difference
+            energy_diff = abs(agent_actions.get_energy_balance(state))
+            self.central_grid[time_str] = energy_diff
 
-            self.central_grid[time_str] =  agent_actions.get_energy_balance(state)
-            next_state = agent_actions.energy_transaction(state, next_state, self.central_grid[time_str])
-            next_state.environment_state.set_energy_borrowed_from_CG(self.central_grid[time_str])
+            next_state.energy_consumption = 0.0
+            next_state.energy_generation = 0.0
+            next_state.battery_curr = 0.0
+            next_state.environment_state.update_energy_borrowed_from_CG(energy_diff)
 
 
         if action['action'] == 'grant':
@@ -203,12 +234,15 @@ class RLAgent:
             if(bal >= 0):
                 energy_grant = energy_request
                 next_state.energy_generation = 0.0
-                next_state.battery_curr = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
-                                                                              (state.energy_generation - energy_request))
+                next_state.battery_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
+                                                                              -energy_grant)
+                agent.log_info("Granting full energy.")
+
             elif(bal < 0):
                 energy_grant = (state.energy_generation + state.battery_curr)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
+                agent.log_info("Granting partial energy.")
 
             # A more complex case can be designed where it gives partial energy
 
@@ -218,6 +252,20 @@ class RLAgent:
             energy_grant = 0.0
             return (next_state, energy_grant)
 
-        return next_state
+        return (next_state, usable_generated_energy)
+
+
+    def write_to_file(self, data, path_to_file = 'assets/error.csv'):
+        import os
+        if os.path.isfile(path_to_file):
+            with open(path_to_file, mode='a') as f:
+                f.write(str(data)+str("\n"))
+                f.close()
+
+        else:
+            with open(path_to_file, 'w+') as f:
+                f.write(str(data)+str("\n"))
+                f.close()
+
 
 

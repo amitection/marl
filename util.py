@@ -25,15 +25,56 @@ def cnv_datetime_to_str(time, format):
     # date = datetime.strptime(time, '%Y-%m-%d %H:%M')
     return time.strftime(format)
 
+
 def get_generation(ts, consumption):
     generation = 0.0
     if ts.time().hour < 18 and ts.time().hour > 6:
         if flip_coin(0.7):
             generation += consumption + consumption*(0.5)
         else:
-            generation = consumption
+            generation = consumption - consumption*(0.1)
 
     return generation
+
+
+def randomize_max(max_value, action_value_pairs):
+    ''
+
+
+def get_reward_for_action(action):
+    action_reward_dict = {
+        'request_ally' : 0,
+        'request_grid': 0,
+        'grant': 0.0,
+        'deny_request': 0,
+        'consume_and_store': 0,
+    }
+
+    return action_reward_dict[action]
+
+
+
+def reward_transaction(state, next_state, action):
+    reward = 0.0
+    # if next_state.environment_state.get_energy_borrowed_from_ally() > state.environment_state.get_energy_borrowed_from_ally():
+    #     reward += 0.5
+    #
+    # if next_state.environment_state.get_energy_granted_to_ally() > state.environment_state.get_energy_granted_to_ally():
+    #     reward += 1
+
+
+    next_state_nzeb = (next_state.environment_state.get_total_generated() + next_state.environment_state.get_energy_borrowed_from_ally()) \
+                  - (next_state.environment_state.get_total_consumed() + next_state.environment_state.get_energy_borrowed_from_CG())
+
+    curr_state_nzeb = (state.environment_state.get_total_generated() + state.environment_state.get_energy_borrowed_from_ally()) \
+                      - (state.environment_state.get_total_consumed() + state.environment_state.get_energy_borrowed_from_CG())
+
+    if next_state_nzeb > curr_state_nzeb:
+        reward += 1
+
+
+    return reward
+
 
 class Counter(dict):
     """

@@ -24,9 +24,10 @@ class NameServer:
         D = D.set_index(D['Electricity.Timestep'])
         return D
 
+
     def schedule_job(self, server_agent):
         d1 = self._load_data("assets/house1_consumption.csv")
-        d2 = self._load_data("assets/house1_consumption.csv")
+        d2 = self._load_data("assets/house2_consumption.csv")
 
         # extracting the list of agents
         agents = self.ns.agents()
@@ -44,8 +45,33 @@ class NameServer:
             'generation': 0.0
         }
 
-        try :
-            for timestep in range(1051230, 2103810, 30):
+        for iter in range(50):
+            last_message = self.dispatch_energy_data(server_agent, d1, d2, message, alice_addr, bob_addr)
+            server_agent.log_info("Iteration (%s) complete!"%iter)
+
+            eoi_message = {
+                'topic': 'END_OF_ITERATION',
+                'iter': iter,
+                'time': last_message['time']
+            }
+
+            # notify each agent to save its status at the end of each iteration
+            self._send_message(server_agent, alice_addr, alias='consumption', message=eoi_message)
+            self._send_message(server_agent, bob_addr, alias='consumption', message=eoi_message)
+            time.sleep(3)
+
+
+        # Exit Message after iterations done
+        # Safe shutdown of all agents for testing
+        self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
+        self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
+
+
+    def dispatch_energy_data(self, server_agent, d1, d2, message, alice_addr, bob_addr):
+
+        try:
+            #for timestep in range(1051230, 2103810, 30):
+            for timestep in range(0, 4290, 30):
                 d1_consumption = d1.loc[d1['Electricity.Timestep'] == timestep]
                 d2_consumption = d2.loc[d2['Electricity.Timestep'] == timestep]
 
@@ -61,15 +87,12 @@ class NameServer:
                     util.get_generation(d2_consumption['Time'].get(timestep), message['consumption']))
                 self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
-                time.sleep(3)
+                time.sleep(2)
 
         except Exception:
             print(traceback.format_exc())
 
-        finally:
-            # Safe shutdown of all agents for testing
-            self._send_message(server_agent, alice_addr, alias='consumption', message={'topic': 'exit'})
-            self._send_message(server_agent, bob_addr, alias='consumption', message={'topic': 'exit'})
+        return message
 
 
     def _send_message(self, server_agent, client_addr, alias,  message):
