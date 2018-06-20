@@ -21,7 +21,7 @@ class FeatureExtractor:
         # self.ohe_day = OneHotEncoder(sparse=False)
         # self.ohe_day.fit(np.array(range(0, 31)))
 
-        train_x = np.zeros(shape=[365 * 48, 3])
+        train_x = np.zeros(shape=[365 * 48, 2])
 
         for i in range (0, (365 * 48)):
             train_x[i][0] = i%48
@@ -29,8 +29,8 @@ class FeatureExtractor:
         for i in range (0, (365 * 48)):
             train_x[i][1] = i%7
 
-        for i in range (0, (365 * 48)):
-            train_x[i][2] = i%12
+        # for i in range (0, (365 * 48)):
+        #     train_x[i][2] = i%12
 
         self.ohe_time = OneHotEncoder(sparse=False)
         self.ohe_time.fit(train_x)
@@ -52,17 +52,17 @@ class FeatureExtractor:
         time_feat = util.Counter()
         time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
         time_feat['dayofweek'] = state.time.weekday() # monday = 0
-        time_feat['month'] = state.time.month - 1
+        #time_feat['month'] = state.time.month - 1
 
         # Transform and avoid the dummy variable trap
-        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
+        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek']])
                                            .reshape(1, -1))[:, :-1]
 
         features = list(features[0])
 
-        features.append(state.energy_consumption)
-        features.append(state.energy_generation)
-        features.append(state.battery_curr)
+        features.append(self.encode_energy(state.energy_consumption))
+        features.append(self.encode_energy(state.energy_generation))
+        features.append(self.encode_energy(state.battery_curr))
 
 
         # TODO Embed action as a feature into this
@@ -82,5 +82,16 @@ class FeatureExtractor:
         for i in range(len(features)):
             feat_dict['f_'+str(i)] = float(features[i])
 
-        print(feat_dict)
+        #print(feat_dict)
         return feat_dict
+
+
+    def encode_energy(self, energy):
+        if energy == 0.0:
+            return 0
+        elif energy < 1.0:
+            return 1.0
+        elif energy < 2.88:
+            return 2.0
+        else:
+            return 3

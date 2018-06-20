@@ -9,9 +9,9 @@ import traceback
 import time
 import copy
 import _thread
-import math
 import util
-from threading import Lock
+import multiprocessing
+from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
 from marlagent.rlagent import RLAgent
@@ -32,27 +32,32 @@ def exit_check(msg):
 
 def energy_request_handler(agent, message):
 
-    global g_agent_state
-
-    lock.acquire()
 
     # Acquire the lock
     lock_count = 0
-    # while not lock.acquire():
-    #     if lock_count <= 2:
-    #         time.sleep(randint(1, 10) / 10)
-    #         lock_count += 1
-    #     else:
-    #         return {'topic': 'ENERGY_REQUEST_DECLINE'}
+    while not multiprocessing_lock.acquire(blocking=False):
+        try:
+            if lock_count <= 3:
+                time.sleep(randint(1, 10) / 10)
+                lock_count += 1
+            else:
+                yield {'topic': 'ENERGY_REQUEST_DECLINE'}
+                return
+        except:
+            print(traceback.format_exc())
+
+
+    agent.log_info("Lock Acquired!")
 
     print("-----------------------Start Transaction-----------------------")
     agent.log_info('Received: %s' % message)
 
     agent.log_info("Deepy copy of global state initiated...")
-    curr_state = copy.deepcopy(g_agent_state)
+    l_g_agent_state = multiprocessing_ns.g_agent_state
+    l_curr_state = copy.deepcopy(l_g_agent_state)
 
     # update with new values of energy consumption and generation
-    curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
+    l_curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
     # amount of requested energy
     energy_req = message['energy']
@@ -69,7 +74,8 @@ def energy_request_handler(agent, message):
     ]
 
     # call get action with this new state
-    action = rl_agent.get_action(copy.deepcopy(curr_state), actions)
+    l_rl_agent = multiprocessing_ns.rl_agent
+    action = l_rl_agent.get_action(copy.deepcopy(l_curr_state), actions)
 
     agent.log_info('Performing action (%s).' % action)
 
@@ -78,34 +84,48 @@ def energy_request_handler(agent, message):
         yield {'topic':'ENERGY_REQUEST_DECLINE'}
 
     # perform action and update global agent state
-    next_state, energy_grant = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
+    next_state, energy_grant = l_rl_agent.do_action(l_curr_state, action, osbrain_ns, agent, args.agentname, allies)
 
     # if energy request is accepted
-    if action['action'] != 'deny_request':
+    if action['action'] == 'grant':
         yield {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
+        agent.log_info("GRANTING:-----:%s"%energy_grant)
+        next_state.environment_state.update_energy_granted_to_ally(energy_grant)
+        print("BATTERY AFTER GRANTING-----:%s"%next_state.battery_curr)
+
         _thread.start_new_thread(cg_http_service.register_transaction, (message['time'],
                                                                        message['agentName'],
                                                                        energy_grant))
 
     # calculate reward
-    delta_reward = next_state.get_score() - curr_state.get_score() + util.get_reward_for_action(action['action'])
+    delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action)
 
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
-    rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
+
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
 
     # update the global state
-    g_agent_state.energy_consumption = 0.0
-    g_agent_state.energy_generation = 0.0
-    g_agent_state.battery_curr = next_state.battery_curr
-    g_agent_state.environment_state = next_state.environment_state
+    l_g_agent_state.energy_consumption = 0.0
+    l_g_agent_state.energy_generation = 0.0
+    l_g_agent_state.battery_curr = next_state.battery_curr
+    l_g_agent_state.environment_state = next_state.environment_state
 
     agent.log_info('Completed update operation. Resting!')
 
-    print("-----------------------End of Transaction-----------------------\n\n\n")
-    # Release the lock
-    lock.release()
+    agent.log_info(next_state)
+    agent.log_info(l_g_agent_state.environment_state)
 
+    print("-----------------------End of Transaction-----------------------\n\n\n")
+
+    # Synchronize Objects
+    multiprocessing_ns.g_agent_state = l_g_agent_state
+    multiprocessing_ns.rl_agent = l_rl_agent
+    agent.log_info("Finished synchronizing objects across forked processes.")
+
+    # Release the lock
+    multiprocessing_lock.release()
+    agent.log_info("Lock Released!")
 
 def energy_consumption_handler(agent, message):
     yield {'topic': 'Ok'}  # immediate reply
@@ -114,53 +134,61 @@ def energy_consumption_handler(agent, message):
     if exit_check(message):
         sys.exit(0)
 
-    global ns
+    global osbrain_ns
 
     if message['topic'] == 'ENERGY_CONSUMPTION':
-        _thread.start_new_thread(invoke_agent_ec_handle, (agent, ns, message))
+        _thread.start_new_thread(invoke_agent_ec_handle, (agent, osbrain_ns, message))
 
     elif message['topic'] == 'END_OF_ITERATION':
         _thread.start_new_thread(eoi_handle, (agent, message))
 
 
-def invoke_agent_ec_handle(agent, ns, message):
+def invoke_agent_ec_handle(agent, osbrain_ns, message):
 
-    global g_agent_state
-    print("Trying to acquire lock!")
-    # Acquire the lock
-    lock.acquire()
+    try:
+        print("Trying to acquire lock!")
+        # Acquire the lock
+        multiprocessing_lock.acquire()
+    except Exception:
+        print(traceback.format_exc())
+        return
 
     print("\n-----------------------Start Transaction-----------------------")
     agent.log_info('Received: %s' % message)
 
     try:
         agent.log_info("Deepy copy of global state initiated...")
-        curr_state = copy.deepcopy(g_agent_state)
+        l_g_agent_state = multiprocessing_ns.g_agent_state
+        l_curr_state = copy.deepcopy(l_g_agent_state)
 
         # update with new values of energy consumption and generation
-        curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
+        l_curr_state.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
 
         # Get energy generation
-        energy_generated = energy_generator.get_generation(curr_state.time)
+        energy_generated = energy_generator.get_generation(l_curr_state.time)
 
-        curr_state.energy_consumption = message['consumption']
-        curr_state.energy_generation = energy_generated
+        l_curr_state.energy_consumption = message['consumption']
+        l_curr_state.energy_generation = energy_generated
 
 
         # call get action with this new state
-        action = rl_agent.get_action(copy.deepcopy(curr_state))
+        l_rl_agent = multiprocessing_ns.rl_agent
+        action = l_rl_agent.get_action(copy.deepcopy(l_curr_state))
 
         agent.log_info('Performing action (%s).' % action)
         # perform action and update global agent state
-        next_state, usable_generated_energy = rl_agent.do_action(curr_state, action, ns, agent, args.agentname, allies)
+        next_state, usable_generated_energy = l_rl_agent.do_action(l_curr_state, action, osbrain_ns, agent, args.agentname, allies)
 
         agent.log_info('Action complete. Calculating reward.')
         # calculate reward
-        delta_reward = next_state.get_score() - curr_state.get_score() + util.get_reward_for_action(action['action'])
+        # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
+        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action)
 
-        agent.log_info('Updating agent with reward %s.' % delta_reward)
+
         # update agent with reward
-        rl_agent.update(state=curr_state, action=action, next_state=next_state, reward=delta_reward)
+        if (action['action'] != 'consume_and_store'):
+            agent.log_info('Updating agent with reward %s.' % delta_reward)
+            l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
 
 
         # Registering information to CG
@@ -168,22 +196,28 @@ def invoke_agent_ec_handle(agent, ns, message):
                                                                         message['consumption'],
                                                                         usable_generated_energy))
         # update the global state
-        g_agent_state.energy_consumption = 0.0
-        g_agent_state.energy_generation = 0.0
-        g_agent_state.battery_curr = next_state.battery_curr
-        g_agent_state.environment_state = next_state.environment_state
+        l_g_agent_state.energy_consumption = 0.0
+        l_g_agent_state.energy_generation = 0.0
+        l_g_agent_state.battery_curr = next_state.battery_curr
+        l_g_agent_state.environment_state = next_state.environment_state
 
         agent.log_info(next_state)
-        agent.log_info(g_agent_state.environment_state)
+        agent.log_info(l_g_agent_state.environment_state)
         agent.log_info('Completed update operation. Resting!')
+        print("-----------------------End of Transaction-----------------------\n\n")
+
+        # Synchronize Objects
+        multiprocessing_ns.g_agent_state = l_g_agent_state
+        multiprocessing_ns.rl_agent = l_rl_agent
+        agent.log_info("Finished synchronizing objects across forked processes.")
 
     except Exception:
         print(traceback.format_exc())
 
     finally:
         # Release the lock
-        lock.release()
-        print("-----------------------End of Transaction-----------------------\n\n")
+        multiprocessing_lock.release()
+        agent.log_info("Lock Released!")
 
 
 def eoi_handle(agent, message):
@@ -191,12 +225,13 @@ def eoi_handle(agent, message):
     End of iteration handler.
     :return:
     '''
-    lock.acquire()
-
+    multiprocessing_lock.acquire()
+    global g_env_state
     try:
         print("\n\n\-----------------------Iteration (%s) Completed-----------------------\n\n"%message['iter'])
         agent.log_info("Publishing Stats...")
-        g_env_state = g_agent_state.environment_state
+        l_g_agent_state = multiprocessing_ns.g_agent_state
+        g_env_state = l_g_agent_state.environment_state
         agent.log_info(g_env_state)
 
         nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
@@ -205,29 +240,6 @@ def eoi_handle(agent, message):
 
         # Log EOI details to CG
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
-
-        # Rewarding agent according to NZEB status
-
-        # if nzeb_status >= 0:
-        #     delta_reward = 50 + nzeb_status
-        # else:
-        #     if nzeb_status <= -25:
-        #         delta_reward = -2
-        #
-        #     elif nzeb_status < -20:
-        #         delta_reward = -1.5
-        #
-        #     elif nzeb_status < -15:
-        #         delta_reward = -1.0
-        #
-        #     elif nzeb_status < -10:
-        #         delta_reward = -0.5
-        #
-        #     elif nzeb_status < -5:
-        #         delta_reward = 1
-        #
-        #     elif nzeb_status <= 0:
-        #         delta_reward = 2
 
         # agent.log_info('Updating agent with reward %s.' % delta_reward)
         #
@@ -239,16 +251,20 @@ def eoi_handle(agent, message):
         #                 reward=delta_reward)
 
         # reset the agent global state
-        g_agent_state.reset(float(args.battInit))
+        l_g_agent_state.reset(float(args.battInit))
         print(".......................RESETTING GLOBAL STATE.......................")
-        agent.log_info(g_agent_state.environment_state)
+        agent.log_info(l_g_agent_state.environment_state)
+
+        # Synchronize Objects
+        multiprocessing_ns.g_agent_state = l_g_agent_state
+        agent.log_info("Finished synchronizing objects across forked processes.")
 
     except Exception:
         print(traceback.format_exc())
 
     finally:
         # Release the lock
-        lock.release()
+        multiprocessing_lock.release()
 
 def predict_energy_generation(time):
     print("TBD")
@@ -257,32 +273,32 @@ def predict_energy_generation(time):
 
 def initiate_nameserver(ns_socket_addr):
     pid = str(os.getpid())
-    ns = None
+    osbrain_ns = None
     is_name_server_host = False
 
     # If file exists then nameserver has already been started. Return a reference to the name server
-    if os.path.isfile(pidfile):
-        print("Name server exists. Fetching reference to existing nameserver...")
-        ns = NSProxy(nsaddr=ns_socket_addr)
-    else:
-        try :
-            print("Creating a new nameserver...")
-            ns = run_nameserver(addr=ns_socket_addr)
-            open(pidfile, 'w+').write(pid)
-            is_name_server_host = True
+    # if os.path.isfile(pidfile):
+    print("Name server exists. Fetching reference to existing nameserver...")
+    osbrain_ns = NSProxy(nsaddr=ns_socket_addr)
+    # else:
+    #     try :
+    #         print("Creating a new nameserver...")
+    #         osbrain_ns = run_nameserver(addr=ns_socket_addr)
+    #         open(pidfile, 'w+').write(pid)
+    #         is_name_server_host = True
+    #
+    #     except Exception:
+    #         osbrain_ns.shutdown()
+    #         print(traceback.format_exc())
+    #         print("ERROR: Exception caught when creating nameserver.")
+    #         sys.exit(-1)
 
-        except Exception:
-            ns.shutdown()
-            print(traceback.format_exc())
-            print("ERROR: Exception caught when creating nameserver.")
-            sys.exit(-1)
-
-    return (is_name_server_host, ns)
+    return (is_name_server_host, osbrain_ns)
 
 
-def start_server_job(ns):
+def start_server_job(osbrain_ns):
     time.sleep(2)
-    ns_agent = NameServer(ns)
+    ns_agent = NameServer(osbrain_ns)
 
     # Start the scheduled job
     steve = run_agent('Steve', serializer='json')
@@ -314,13 +330,8 @@ if __name__ == '__main__':
     print("Hi! I am "+args.agentname+". I am taking command of this process.")
 
     # Initiate name server
-    global ns
-    is_name_server_host, ns = initiate_nameserver(args.nameserver)
-
-    global lock
-    lock = Lock()
-    global lock_count
-    lock_count = 0
+    global osbrain_ns
+    is_name_server_host, osbrain_ns = initiate_nameserver(args.nameserver)
 
     global cg_http_service
     cg_http_service = httpservice.CGHTTPHandler(args.agentname)
@@ -330,16 +341,20 @@ if __name__ == '__main__':
         pyro_log()
 
         # instantiate reinforcement learning module and making it globally accessible
-        global rl_agent
-        rl_agent = RLAgent()
+        global multiprocessing_ns, multiprocessing_lock
+        manager = multiprocessing.Manager()
+        multiprocessing_ns = manager.Namespace()
+        multiprocessing_lock = manager.RLock()
+
+        multiprocessing_ns.rl_agent = RLAgent()
 
         global energy_generator
         energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))
 
         # Declare a agent state and make it global
-        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
-        global g_agent_state
-        g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0)
+        # global g_agent_state
+        multiprocessing_ns.g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = float(args.battInit), time = '2014/01/01 12:00', environment_state = environment_state,
                                    cg_http_service = cg_http_service)
 
@@ -347,17 +362,21 @@ if __name__ == '__main__':
         allies = [ally for ally in args.allies.split(",") ]
 
         # Initialize the agent
-        agent = run_agent(name = args.agentname, nsaddr = ns.addr(), serializer='json', transport='tcp')
+        agent = run_agent(name = args.agentname, nsaddr = osbrain_ns.addr(), serializer='json', transport='tcp')
         agent.bind('REP', alias=str('energy_request_'+args.agentname), handler=energy_request_handler)
         agent.bind('REP', alias='consumption', handler=energy_consumption_handler)
 
         if is_name_server_host:
-            start_server_job(ns)
+            start_server_job(osbrain_ns)
 
     finally:
         if is_name_server_host:
             os.unlink(pidfile)
-        #     ns.shutdown()
+        #     osbrain_ns.shutdown()
+
+        if not is_name_server_host:
+            while(1):
+                time.sleep(1)
 
         print("Bye!")
 

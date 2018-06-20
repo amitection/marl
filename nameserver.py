@@ -87,7 +87,7 @@ class NameServer:
                     util.get_generation(d2_consumption['Time'].get(timestep), message['consumption']))
                 self._send_message(server_agent, bob_addr, alias='consumption', message=message)
 
-                time.sleep(0.5)
+                time.sleep(2)
 
         except Exception:
             print(traceback.format_exc())

@@ -7,7 +7,7 @@ from marlagent import agent_actions
 
 class RLAgent:
 
-    def __init__(self, alpha=1.0, epsilon=0.05, gamma=0.8, numTraining = 10):
+    def __init__(self, alpha=0.001, epsilon=0.2, gamma=0.9, numTraining = 10):
 
         print("RL agent instantiated...")
         self.alpha = float(alpha) # learning rate
@@ -35,6 +35,8 @@ class RLAgent:
         for f_key in features:
             q_value = q_value + (features[f_key] * self.weights[f_key])
 
+        # print(features)
+        # print("Q - VALUE:::::%s"%q_value)
         return q_value
 
 
@@ -113,12 +115,21 @@ class RLAgent:
         """
         # TODO
         features = self.feat_extractor.get_features(state, action)
-        difference = math.sinh(reward) + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
+        # difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
+        q_value_next_state = (self.discount * self.compute_value_from_qValues(next_state))
+        q_value_curr_state = self.get_qValue(state, action)
+        difference = reward + q_value_next_state - q_value_curr_state
+
+        # print("DISCOUNTED Q VALUE NEXT STATE:%s"%q_value_next_state)
+        # print("Q VALUE CURR STATE:%s" % q_value_curr_state)
+        print("CORRECTION-------------:%s"%difference)
+        self.write_to_file(data = difference, path_to_file = 'assets/'+state.name+'error.csv')
 
         for f_key in features:
             self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
 
         # Write weights into a file to observe learning
+        # print("WEIGHTS---------------:")
         # print(self.weights)
 
 
@@ -168,8 +179,8 @@ class RLAgent:
             batt_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr, diff)
 
             # Subtract the energy which could not be used
-            next_state.environment_state.set_total_generated(next_state.environment_state.get_total_generated() - excess)
             usable_generated_energy = usable_generated_energy - excess
+            next_state.environment_state.set_total_generated(next_state.environment_state.get_total_generated() - excess)
 
             next_state.battery_curr = batt_curr
             next_state.energy_generation = 0.0
@@ -225,10 +236,13 @@ class RLAgent:
                 next_state.energy_generation = 0.0
                 next_state.battery_curr, excess = agent_actions.update_battery_status(state.battery_max, state.battery_curr,
                                                                               -energy_grant)
+                agent.log_info("Granting full energy.")
+
             elif(bal < 0):
                 energy_grant = (state.energy_generation + state.battery_curr)
                 next_state.energy_generation = 0.0
                 next_state.battery_curr = 0.0
+                agent.log_info("Granting partial energy.")
 
             # A more complex case can be designed where it gives partial energy
 
@@ -239,5 +253,19 @@ class RLAgent:
             return (next_state, energy_grant)
 
         return (next_state, usable_generated_energy)
+
+
+    def write_to_file(self, data, path_to_file = 'assets/error.csv'):
+        import os
+        if os.path.isfile(path_to_file):
+            with open(path_to_file, mode='a') as f:
+                f.write(str(data)+str("\n"))
+                f.close()
+
+        else:
+            with open(path_to_file, 'w+') as f:
+                f.write(str(data)+str("\n"))
+                f.close()
+
 
 

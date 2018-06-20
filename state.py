@@ -58,21 +58,27 @@ class AgentState:
         #     score -= 10
         #
         # if there is remaining charge in the battery
-        if self.battery_curr > 0.0:
-            score += 1.0
+        # if self.battery_curr > 0.0:
+        #     score += 1.0
 
         # overall impact of the agent on the environment
-        if (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
-                >= (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
-            score += 1.0
-        elif (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
-                < (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
-            score -= 1.0
+        # if (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
+        #         >= (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
+        #     score += 1.0
+        # elif (self.environment_state.get_total_generated() + self.environment_state.get_energy_borrowed_from_ally()) \
+        #         < (self.environment_state.get_total_consumed() + self.environment_state.get_energy_borrowed_from_CG()):
+        #     # score -= 1.0
+        #     score += 0.0
 
 
         # Add global state information
-        #community_status = self.cg_http_service.get_energy_status()
+        # community_status = self.cg_http_service.get_energy_status()
 
+
+        diff = self.environment_state.get_energy_borrowed_from_ally() - (0.5*self.environment_state.get_energy_borrowed_from_CG())
+
+        if(diff > 0):
+            score += 1
 
         return score
 
@@ -82,7 +88,7 @@ class AgentState:
         self.energy_generation = 0.0
         self.battery_curr = battery_init
         self.time =  datetime.strptime('2014/01/01 12:00', '%Y/%m/%d %H:%M')
-        self.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0)
+        self.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0)
 
 
     def __str__(self):
@@ -96,17 +102,21 @@ class AgentState:
 
         return str_rep
 
+    def set_environment_state(self, environment_state):
+        self.environment_state = environment_state
+
 
 class EnvironmentState:
     """
     Maintains the state of the environment
     """
 
-    def __init__(self, total_consumed, total_generated, central_grid, energy_borrowed_from_ally):
+    def __init__(self, total_consumed, total_generated, central_grid, energy_borrowed_from_ally, energy_granted_to_ally):
         self.total_consumed = total_consumed
         self.total_generated = total_generated
         self.central_grid = central_grid
         self.energy_borrowed_from_ally = energy_borrowed_from_ally
+        self.energy_granted_to_ally = energy_granted_to_ally
 
     def get_total_consumed(self):
         return self.total_consumed
@@ -135,12 +145,19 @@ class EnvironmentState:
     def update_energy_borrowed_from_ally(self, energy):
         self.energy_borrowed_from_ally = self.energy_borrowed_from_ally + energy
 
+    def update_energy_granted_to_ally(self, energy):
+        self.energy_granted_to_ally = self.energy_granted_to_ally + energy
+
+    def get_energy_granted_to_ally(self):
+        return self.energy_granted_to_ally
+
     def __str__(self):
         str_rep = """
         Total Generated: {0}
         Total Consumed: {1}
         Total Borrowed From CG: {2}
         Total Borrowed From Allies: {3}
-        """.format(self.total_generated, self.total_consumed, self.central_grid, self.energy_borrowed_from_ally)
+        Total Granted To Allies: {4}
+        """.format(self.total_generated, self.total_consumed, self.central_grid, self.energy_borrowed_from_ally, self.energy_granted_to_ally)
 
         return str_rep
