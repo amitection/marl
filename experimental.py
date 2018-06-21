@@ -36,6 +36,7 @@ if __name__ == '__main__':
     bob.connect(addr2, alias='main2')
     bob.send('main2', "Some message")
     reply = bob.recv('main2')
-
+    agents = ns.agents()
+    print(agents)
     ns.shutdown()
 

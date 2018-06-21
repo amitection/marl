@@ -6,3 +6,8 @@ feat_extractor.pyc
 marlagent/*.pyc
 *.pyc
 assets/ns.pid
+assets/Aliceerror.csv
+assets/Boberror.csv
+sync.log
+assets/Charlieerror.csv
+p3.log

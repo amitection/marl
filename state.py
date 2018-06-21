@@ -7,10 +7,12 @@ class AgentState:
 
     actions = ['request_ally', 'request_grid', 'grant', 'deny_request', 'consume_and_store']
 
-    def __init__(self, name, energy_consumption, energy_generation, battery_curr, time, environment_state,
+    def __init__(self, name, iter, energy_consumption, energy_generation, battery_curr, time, environment_state,
                  cg_http_service):
         print("registering state...")
+
         self.name = name
+        self.iter = iter
         self.energy_consumption = energy_consumption
         self.energy_generation = energy_generation
         self.battery_max = 5.76
@@ -72,13 +74,12 @@ class AgentState:
 
 
         # Add global state information
-        # community_status = self.cg_http_service.get_energy_status()
+        # community_status = self.cg_http_service.get_energy_status(self.iter)
 
-
-        diff = self.environment_state.get_energy_borrowed_from_ally() - (0.5*self.environment_state.get_energy_borrowed_from_CG())
-
-        if(diff > 0):
-            score += 1
+        # diff = self.environment_state.get_energy_borrowed_from_ally() - (0.5*self.environment_state.get_energy_borrowed_from_CG())
+        #
+        # if(diff > 0):
+        #     score += 1
 
         return score
 
@@ -88,7 +89,7 @@ class AgentState:
         self.energy_generation = 0.0
         self.battery_curr = battery_init
         self.time =  datetime.strptime('2014/01/01 12:00', '%Y/%m/%d %H:%M')
-        self.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0)
+        self.environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 
     def __str__(self):
@@ -111,12 +112,16 @@ class EnvironmentState:
     Maintains the state of the environment
     """
 
-    def __init__(self, total_consumed, total_generated, central_grid, energy_borrowed_from_ally, energy_granted_to_ally):
+    def __init__(self, total_consumed, total_generated, central_grid, energy_borrowed_from_ally, energy_granted_to_ally,
+                 net_grid_status):
+
         self.total_consumed = total_consumed
         self.total_generated = total_generated
         self.central_grid = central_grid
         self.energy_borrowed_from_ally = energy_borrowed_from_ally
         self.energy_granted_to_ally = energy_granted_to_ally
+        self.net_grid_status = net_grid_status
+
 
     def get_total_consumed(self):
         return self.total_consumed
