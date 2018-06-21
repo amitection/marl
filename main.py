@@ -32,7 +32,6 @@ def exit_check(msg):
 
 def energy_request_handler(agent, message):
 
-
     # Acquire the lock
     lock_count = 0
     while not multiprocessing_lock.acquire(blocking=False):
@@ -97,13 +96,20 @@ def energy_request_handler(agent, message):
                                                                        message['agentName'],
                                                                        energy_grant))
 
+    # Get grid status from CG
+    curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+    net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+
     # calculate reward
-    delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action)
+    delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
 
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
     l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+
+    # Update grid status
+    next_state.environment_state.net_grid_status = net_curr_grid_status
 
     # update the global state
     l_g_agent_state.energy_consumption = 0.0
@@ -126,6 +132,7 @@ def energy_request_handler(agent, message):
     # Release the lock
     multiprocessing_lock.release()
     agent.log_info("Lock Released!")
+
 
 def energy_consumption_handler(agent, message):
     yield {'topic': 'Ok'}  # immediate reply
@@ -179,22 +186,35 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
         # perform action and update global agent state
         next_state, usable_generated_energy = l_rl_agent.do_action(l_curr_state, action, osbrain_ns, agent, args.agentname, allies)
 
-        agent.log_info('Action complete. Calculating reward.')
+        agent.log_info('Action complete. Registering action effect with the environment.')
+
+        # Registering information to CG
+        _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
+                                                                        message['iter'],
+                                                                        float(args.battInit),
+                                                                        message['consumption'],
+                                                                        usable_generated_energy,
+                                                                        next_state.environment_state.get_energy_borrowed_from_CG()
+                                                                        - l_curr_state.environment_state.get_energy_borrowed_from_CG()))
+
+        agent.log_info('Calculating reward.')
+
+        # Get grid status from CG
+        curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+
         # calculate reward
         # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
-        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action)
-
+        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
 
         # update agent with reward
         if (action['action'] != 'consume_and_store'):
             agent.log_info('Updating agent with reward %s.' % delta_reward)
             l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
 
+        # Update grid status
+        next_state.environment_state.net_grid_status = net_curr_grid_status
 
-        # Registering information to CG
-        _thread.start_new_thread(cg_http_service.update_energy_status, (message['time'],
-                                                                        message['consumption'],
-                                                                        usable_generated_energy))
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
         l_g_agent_state.energy_generation = 0.0
@@ -252,7 +272,9 @@ def eoi_handle(agent, message):
 
         # reset the agent global state
         l_g_agent_state.reset(float(args.battInit))
+        l_g_agent_state.iter = int(message['iter']) + 1
         print(".......................RESETTING GLOBAL STATE.......................")
+
         agent.log_info(l_g_agent_state.environment_state)
 
         # Synchronize Objects
@@ -352,9 +374,9 @@ if __name__ == '__main__':
         energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))
 
         # Declare a agent state and make it global
-        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0)
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         # global g_agent_state
-        multiprocessing_ns.g_agent_state = AgentState(name = args.agentname, energy_consumption = 0.0, energy_generation = 0.0,
+        multiprocessing_ns.g_agent_state = AgentState(name = args.agentname, iter = 0, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = float(args.battInit), time = '2014/01/01 12:00', environment_state = environment_state,
                                    cg_http_service = cg_http_service)
 

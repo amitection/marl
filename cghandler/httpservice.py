@@ -21,17 +21,20 @@ class CGHTTPHandler:
         self.agent_id = json.loads(response.content)['id']
 
 
-    def update_energy_status(self, time, energy_consumption, energy_generation):
+    def update_energy_status(self, time, iter, batt_init, energy_consumption, energy_generation, borrowed_from_CG):
 
         url = 'http://localhost:8080/energy/status'
 
         data = {
             "timestamp": time,
             "agentId": self.agent_id,
-            "energyGeneration": energy_consumption,
-            "energyConsumption": energy_generation
+            "iter": iter,
+            "batteryInitial": batt_init,
+            "energyConsumption": energy_consumption,
+            "energyGeneration": energy_generation,
+            "borrowedFromCG": borrowed_from_CG
         }
-
+        print(data)
         response = requests.put(url=url, json=data)
 
         if response.status_code == 200:
@@ -60,13 +63,13 @@ class CGHTTPHandler:
             print("ERROR: %s"%response.content)
 
 
-    def get_energy_status(self):
-        url = 'http://localhost:8080/energy/status/grid'
+    def get_energy_status(self, iter):
+        url = 'http://localhost:8080/energy/status/grid/'+str(iter)
         response = requests.get(url=url)
 
         if response.status_code == 200:
             print("Grid energy status retrieved successfully.")
-            return response.content
+            return json.loads(response.content)
         else:
             print("ERROR: Error retrieving grid energy status. %s"%response.content)
             return None

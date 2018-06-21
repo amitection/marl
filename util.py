@@ -54,7 +54,7 @@ def get_reward_for_action(action):
 
 
 
-def reward_transaction(state, next_state, action):
+def reward_transaction(state, next_state, action, net_curr_grid_status):
     reward = 0.0
     # if next_state.environment_state.get_energy_borrowed_from_ally() > state.environment_state.get_energy_borrowed_from_ally():
     #     reward += 0.5
@@ -63,17 +63,30 @@ def reward_transaction(state, next_state, action):
     #     reward += 1
 
 
-    next_state_nzeb = (next_state.environment_state.get_total_generated() + next_state.environment_state.get_energy_borrowed_from_ally()) \
-                  - (next_state.environment_state.get_total_consumed() + next_state.environment_state.get_energy_borrowed_from_CG())
+    # Local NZEB State
+    # next_state_nzeb = (next_state.environment_state.get_total_generated() + next_state.environment_state.get_energy_borrowed_from_ally()) \
+    #               - (next_state.environment_state.get_total_consumed() + next_state.environment_state.get_energy_borrowed_from_CG())
+    #
+    # curr_state_nzeb = (state.environment_state.get_total_generated() + state.environment_state.get_energy_borrowed_from_ally()) \
+    #                   - (state.environment_state.get_total_consumed() + state.environment_state.get_energy_borrowed_from_CG())
+    #
+    # if next_state_nzeb > curr_state_nzeb:
+    #     reward += 1
 
-    curr_state_nzeb = (state.environment_state.get_total_generated() + state.environment_state.get_energy_borrowed_from_ally()) \
-                      - (state.environment_state.get_total_consumed() + state.environment_state.get_energy_borrowed_from_CG())
 
-    if next_state_nzeb > curr_state_nzeb:
+    # Community NZEB state
+
+
+    if(net_curr_grid_status > state.environment_state.net_grid_status):
         reward += 1
 
-
     return reward
+
+
+def calc_net_grid_status(curr_grid_status):
+    net_curr_grid_status = curr_grid_status['generation'] \
+                           - (curr_grid_status['consumption'] - curr_grid_status['borrowedFromCG'])
+    return net_curr_grid_status
 
 
 class Counter(dict):

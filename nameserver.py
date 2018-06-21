@@ -20,7 +20,8 @@ class NameServer:
 
         d_map = {
             "Alice": self.d1,
-            "Bob": self.d2
+            "Bob": self.d2,
+            "Charlie": self.d1
         }
 
         # extracting the list of agents
@@ -33,11 +34,14 @@ class NameServer:
         message = {
             'topic': 'ENERGY_CONSUMPTION',
             'time': datetime.now().strftime('%Y/%m/%d %H:%M'),
+            'iter': 0,
             'consumption': 0.0,
             'generation': 0.0
         }
 
         for iter in range(50):
+            message['iter'] = iter
+
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
@@ -74,7 +78,7 @@ class NameServer:
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
 
         try:
-            #for timestep in range(1051230, 2103810, 30):
+            # for timestep in range(0, 150, 30):
             for timestep in range(0, 4290, 30):
 
                 for name in agent_name_arr:
