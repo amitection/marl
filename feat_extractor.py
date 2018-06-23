@@ -1,5 +1,7 @@
 import util
 import numpy as np
+from state import EnvironmentState
+from datetime import datetime
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from state import AgentState
 
@@ -11,15 +13,6 @@ class FeatureExtractor:
 
 
     def _train(self):
-
-        # self.ohe_hour = OneHotEncoder(sparse=False)
-        # self.ohe_hour.fit(np.array(range(0,48)))
-        #
-        # self.ohe_month = OneHotEncoder(sparse=False)
-        # self.ohe_month.fit(np.array(range(0, 12)))
-        #
-        # self.ohe_day = OneHotEncoder(sparse=False)
-        # self.ohe_day.fit(np.array(range(0, 31)))
 
         train_x = np.zeros(shape=[365 * 48, 2])
 
@@ -49,21 +42,7 @@ class FeatureExtractor:
         :return: a list of feature values
         '''
 
-        time_feat = util.Counter()
-        time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
-        time_feat['dayofweek'] = state.time.weekday() # monday = 0
-        #time_feat['month'] = state.time.month - 1
-
-        # Transform and avoid the dummy variable trap
-        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek']])
-                                           .reshape(1, -1))[:, :-1]
-
-        features = list(features[0])
-
-        features.append(self.encode_energy(state.energy_consumption))
-        features.append(self.encode_energy(state.energy_generation))
-        features.append(self.encode_energy(state.battery_curr))
-
+        features = self.encode_state(state)
 
         # TODO Embed action as a feature into this
         # Modelling energy request data
@@ -85,8 +64,50 @@ class FeatureExtractor:
         #print(feat_dict)
         return feat_dict
 
+    def encode_state(self, state):
+        '''
+        Encode the state variable into n features
+        :param state:
+        :return:
+        '''
 
-    def encode_energy(self, energy):
+        time_feat = util.Counter()
+        time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
+        time_feat['dayofweek'] = state.time.weekday()  # monday = 0
+        # time_feat['month'] = state.time.month - 1
+
+        # Transform and avoid the dummy variable trap
+        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
+                                           .reshape(1, -1))[:, :-1]
+
+        features = list(features[0])
+
+        features.append(self.__encode_energy(state.energy_consumption))
+        features.append(self.__encode_energy(state.energy_generation))
+        features.append(self.__encode_energy(state.battery_curr))
+
+        return features
+
+
+    def get_n_features(self):
+        '''
+        Simulates a fake agent state and returns the numbers of features.
+        :param state:
+        :return:
+        '''
+
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        fake_agent_state = AgentState(name='Test', energy_consumption=0.0, energy_generation=0.0,
+                                      battery_curr=float(5), time=datetime.now(),
+                                      environment_state=environment_state,
+                                      cg_http_service=None)
+
+        features = self.encode_state(fake_agent_state)
+
+        return len(features)
+
+
+    def __encode_energy(self, energy):
         if energy == 0.0:
             return 0
         elif energy < 1.0:
