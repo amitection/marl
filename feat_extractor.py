@@ -44,9 +44,10 @@ class FeatureExtractor:
 
         features = self.encode_state(state)
 
-        # TODO Embed action as a feature into this
+        # TODO: Embed action as a feature into this
         # Modelling energy request data
         if action['action'] == 'grant' or action['action'] == 'deny_request':
+            # TODO: Discritize by observing the values of data
             features.append(action['data'])
         else:
             features.append(0)
@@ -55,9 +56,9 @@ class FeatureExtractor:
         for f in action_trans[0]:
             features.append(f)
 
-        return self.__encode_features_to_Counter(features)
+        #return self.__encode_features_to_Counter(features)
 
-        # return features
+        return features
 
 
     def encode_state(self, state):
@@ -103,12 +104,13 @@ class FeatureExtractor:
         '''
 
         environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-        fake_agent_state = AgentState(name='Test', energy_consumption=0.0, energy_generation=0.0,
+        fake_agent_state = AgentState(name='Test', iter =0, energy_consumption=0.0, energy_generation=0.0,
                                       battery_curr=float(5), time=datetime.now(),
                                       environment_state=environment_state,
                                       cg_http_service=None)
-
-        features = self.encode_state(fake_agent_state)
+        action = {}
+        action['action'] = 'consume_and_store'
+        features = self.get_features(fake_agent_state, action)
 
         return len(features)
 
