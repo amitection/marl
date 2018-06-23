@@ -15,6 +15,7 @@ from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
 from marlagent.agent.linear.lin_agent import LinearQAgent
+from marlagent.agent.dqn.dqn import DQNAgent
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
@@ -293,29 +294,11 @@ def predict_energy_generation(time):
     return 0.0
 
 
-def initiate_nameserver(ns_socket_addr):
-    pid = str(os.getpid())
+def get_ref_to_nameserver(ns_socket_addr):
     osbrain_ns = None
-    is_name_server_host = False
-
-    # If file exists then nameserver has already been started. Return a reference to the name server
-    # if os.path.isfile(pidfile):
-    print("Name server exists. Fetching reference to existing nameserver...")
+    print("Fetching reference to existing nameserver...")
     osbrain_ns = NSProxy(nsaddr=ns_socket_addr)
-    # else:
-    #     try :
-    #         print("Creating a new nameserver...")
-    #         osbrain_ns = run_nameserver(addr=ns_socket_addr)
-    #         open(pidfile, 'w+').write(pid)
-    #         is_name_server_host = True
-    #
-    #     except Exception:
-    #         osbrain_ns.shutdown()
-    #         print(traceback.format_exc())
-    #         print("ERROR: Exception caught when creating nameserver.")
-    #         sys.exit(-1)
-
-    return (is_name_server_host, osbrain_ns)
+    return osbrain_ns
 
 
 def start_server_job(osbrain_ns):
@@ -332,7 +315,7 @@ def args_handler():
 
     parser.add_argument('--agentname', required=True, help='Name of the agent')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
-    parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
+    parser.add_argument('--allies', required=False, help='Socket address of the nameserver')
     parser.add_argument('--battInit', required=True, help='Initial battery charge.')
     parser.add_argument('--solarexposure', required=False, help='Path to solar exposure dataset')
     parser.add_argument('--nSolarPanel', required=True, help='Number fo solar panel this house has')
@@ -353,7 +336,7 @@ if __name__ == '__main__':
 
     # Initiate name server
     global osbrain_ns
-    is_name_server_host, osbrain_ns = initiate_nameserver(args.nameserver)
+    osbrain_ns = get_ref_to_nameserver(args.nameserver)
 
     global cg_http_service
     cg_http_service = httpservice.CGHTTPHandler(args.agentname)
@@ -368,8 +351,8 @@ if __name__ == '__main__':
         multiprocessing_ns = manager.Namespace()
         multiprocessing_lock = manager.RLock()
 
-        # multiprocessing_ns.rl_agent = RLAgent()
-        multiprocessing_ns.rl_agent = LinearQAgent()
+        multiprocessing_ns.rl_agent = DQNAgent()
+        # multiprocessing_ns.rl_agent = LinearQAgent()
 
         global energy_generator
         energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))
@@ -383,23 +366,23 @@ if __name__ == '__main__':
 
         global allies
         allies = [ally for ally in args.allies.split(",") ]
+        # allies = []
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = osbrain_ns.addr(), serializer='json', transport='tcp')
         agent.bind('REP', alias=str('energy_request_'+args.agentname), handler=energy_request_handler)
         agent.bind('REP', alias='consumption', handler=energy_consumption_handler)
 
-        if is_name_server_host:
-            start_server_job(osbrain_ns)
+
+
+    except Exception:
+        print(traceback.format_exc())
+
 
     finally:
-        if is_name_server_host:
-            os.unlink(pidfile)
-        #     osbrain_ns.shutdown()
 
-        if not is_name_server_host:
-            while(1):
-                time.sleep(1)
+        while(1):
+            time.sleep(1)
 
         print("Bye!")
 

@@ -33,9 +33,7 @@ class DQNAgent(rlagent.RLAgent):
     def __init__(self, n_features=69):
 
         super(DQNAgent, self).__init__()
-
         print("DQN initiated...")
-
 
         self.num_param_updates = 0
         self.curr_batch_size = 0
@@ -61,6 +59,8 @@ class DQNAgent(rlagent.RLAgent):
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
+        print("Calculated Q-Value: ",q_values_ts)
+
         # Use volatile = True if variable is only used in inference mode, i.e. don’t save the history
         return q_values_ts
 
@@ -78,15 +78,19 @@ class DQNAgent(rlagent.RLAgent):
 
         # clip the bellman error between [-1 , 1]
         clipped_bellman_error = bellman_error.clamp(-1, 1)
+        print("Bellman Error:", clipped_bellman_error)
 
         d_error = clipped_bellman_error * -1.0
+        print("Delta Error:",d_error)
 
         self.write_to_file(data=d_error, path_to_file='assets/' + state.name + 'error.csv')
 
         # Clear previous gradients before backward pass
         self.optimizer.zero_grad()
 
-        q_value_curr_state.backward(d_error.data.unsqueeze(1))
+        new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
+        new_q_value_curr_state.backward()
+        # q_value_curr_state.backward(d_error.data.unsqueeze(1))
 
         # Perfom the update
         self.optimizer.step()
