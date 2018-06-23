@@ -30,16 +30,12 @@ optimizer_spec = OptimizerSpec(
 
 class DQNAgent(rlagent.RLAgent):
 
-    def __init__(self, batch_size, n_features=69, gamma=0.99, target_update_freq=100):
+    def __init__(self, n_features=69):
 
         super(DQNAgent, self).__init__()
 
         print("DQN initiated...")
 
-
-        self.gamma = gamma
-        self.batch_size = batch_size
-        self.target_update_freq = target_update_freq
 
         self.num_param_updates = 0
         self.curr_batch_size = 0
@@ -47,7 +43,7 @@ class DQNAgent(rlagent.RLAgent):
         self.n_features = self.feat_extractor.get_n_features()
 
         # Instantiating a MLP model
-        self.Q = DQN(n_features)
+        self.Q = DQN(self.n_features)
 
 
         # Construct Q network optimizer function

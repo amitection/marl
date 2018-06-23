@@ -19,9 +19,9 @@ class DQN(nn.Module):
 
 
     def forward(self, x):
-        x = F.sigmoid(self.conv1(self.fc1))
-        x = F.sigmoid(self.conv1(self.fc2))
-        x = F.sigmoid(self.conv1(self.fc3))
+        x = F.sigmoid(self.fc1(x))
+        x = F.sigmoid(self.fc2(x))
+        x = F.sigmoid(self.fc3(x))
         return x
 
     
