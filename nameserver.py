@@ -39,23 +39,32 @@ class NameServer:
             'generation': 0.0
         }
 
+        max_iter = 50
+
         for iter in range(50):
             message['iter'] = iter
 
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
-            eoi_message = {
-                'topic': 'END_OF_ITERATION',
-                'iter': iter,
-                'time': last_message['time']
-            }
+            if iter <= (max_iter-2):
+                eoi_message = {
+                    'topic': 'END_OF_ITERATION',
+                    'iter': iter,
+                    'time': last_message['time']
+                }
+            else:
+                # last iteration will warn the agents to exploit their policies completely
+                eoi_message = {
+                    'topic': 'TRAINING_COMPLETE',
+                    'iter': iter,
+                    'time': last_message['time']
+                }
 
             # EOI: notify each agent to save its status at the end of each iteration
             for name in agent_name_arr:
                 self._send_message(server_agent, agent_addr[name], alias='consumption', message=eoi_message)
             time.sleep(3)
-
 
         # Exit Message after iterations done
         # Safe shutdown of all agents for testing

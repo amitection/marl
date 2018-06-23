@@ -147,7 +147,7 @@ def energy_consumption_handler(agent, message):
     if message['topic'] == 'ENERGY_CONSUMPTION':
         _thread.start_new_thread(invoke_agent_ec_handle, (agent, osbrain_ns, message))
 
-    elif message['topic'] == 'END_OF_ITERATION':
+    elif message['topic'] == 'END_OF_ITERATION' or message['topic'] == 'TRAINING_COMPLETE':
         _thread.start_new_thread(eoi_handle, (agent, message))
 
 
@@ -277,6 +277,11 @@ def eoi_handle(agent, message):
         print(".......................RESETTING GLOBAL STATE.......................")
 
         agent.log_info(l_g_agent_state.environment_state)
+
+        if message['topic'] == 'TRAINING_COMPLETE':
+            l_rl_agent = multiprocessing_ns.rl_agent
+            l_rl_agent.epsilon = 0.0
+            multiprocessing_ns.rl_agent = l_rl_agent
 
         # Synchronize Objects
         multiprocessing_ns.g_agent_state = l_g_agent_state
