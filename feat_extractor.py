@@ -55,14 +55,10 @@ class FeatureExtractor:
         for f in action_trans[0]:
             features.append(f)
 
+        return self.__encode_features_to_Counter(features)
 
-        # Transforming into apt data structure
-        feat_dict = util.Counter()
-        for i in range(len(features)):
-            feat_dict['f_'+str(i)] = float(features[i])
+        # return features
 
-        #print(feat_dict)
-        return feat_dict
 
     def encode_state(self, state):
         '''
@@ -77,7 +73,7 @@ class FeatureExtractor:
         # time_feat['month'] = state.time.month - 1
 
         # Transform and avoid the dummy variable trap
-        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek'], time_feat['month']])
+        features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek']])
                                            .reshape(1, -1))[:, :-1]
 
         features = list(features[0])
@@ -87,6 +83,16 @@ class FeatureExtractor:
         features.append(self.__encode_energy(state.battery_curr))
 
         return features
+
+
+    def __encode_features_to_Counter(self, features):
+        # Transforming into apt data structure
+        feat_dict = util.Counter()
+        for i in range(len(features)):
+            feat_dict['f_' + str(i)] = float(features[i])
+
+        # print(feat_dict)
+        return feat_dict
 
 
     def get_n_features(self):
@@ -116,3 +122,5 @@ class FeatureExtractor:
             return 2.0
         else:
             return 3
+
+

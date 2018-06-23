@@ -14,7 +14,7 @@ import multiprocessing
 from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
-from marlagent.rlagent import RLAgent
+from marlagent.agent.linear.lin_agent import LinearQAgent
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
@@ -368,7 +368,8 @@ if __name__ == '__main__':
         multiprocessing_ns = manager.Namespace()
         multiprocessing_lock = manager.RLock()
 
-        multiprocessing_ns.rl_agent = RLAgent()
+        # multiprocessing_ns.rl_agent = RLAgent()
+        multiprocessing_ns.rl_agent = LinearQAgent()
 
         global energy_generator
         energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))

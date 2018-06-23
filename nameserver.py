@@ -78,8 +78,8 @@ class NameServer:
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
 
         try:
-            # for timestep in range(0, 150, 30):
-            for timestep in range(0, 4290, 30):
+            for timestep in range(0, 150, 30):
+            # for timestep in range(0, 4290, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
