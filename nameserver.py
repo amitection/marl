@@ -39,9 +39,9 @@ class NameServer:
             'generation': 0.0
         }
 
-        max_iter = 50
+        max_iter = 10001
 
-        for iter in range(50):
+        for iter in range(max_iter):
             message['iter'] = iter
 
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
