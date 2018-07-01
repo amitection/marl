@@ -44,17 +44,19 @@ class FeatureExtractor:
 
         features = self.encode_state(state)
 
-        # TODO: Embed action as a feature into this
+        # ---------------- ENCODING ACTIONS ----------------
         # Modelling energy request data
         if action['action'] == 'grant' or action['action'] == 'deny_request':
             # TODO: Discritize by observing the values of data
-            features.append(action['data'])
+            features.append(int(action['data']/0.2))
+
         else:
             features.append(0)
 
         action_trans = self.ohe_actions.transform(self.lb_actions.transform([action['action']]).reshape(1,-1))
         for f in action_trans[0]:
             features.append(f)
+        # ------------------------------------------------
 
         #return self.__encode_features_to_Counter(features)
 

@@ -284,6 +284,12 @@ def eoi_handle(agent, message):
 
         # calculate reward
         delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
+
+        # If this grid status is better than the previous best grid status
+        if util.compare(net_curr_grid_status, multiprocessing_ns.best_grid_status) > 1 :
+            multiprocessing_ns.best_grid_status = net_curr_grid_status
+            delta_reward += 3
+
         multiprocessing_ns.old_grid_status = net_curr_grid_status
         l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = delta_reward)
         #---------------------------------------------------------------
@@ -391,6 +397,7 @@ if __name__ == '__main__':
                                    cg_http_service = cg_http_service)
 
         multiprocessing_ns.old_grid_status = -99999
+        multiprocessing_ns.best_grid_status = -99999
 
         global allies
         allies = [ally for ally in args.allies.split(",") ]
