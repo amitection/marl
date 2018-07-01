@@ -42,7 +42,7 @@ class DQNAgent(rlagent.RLAgent):
         # Instantiating a MLP model
         self.Q = DQN(self.n_features)
 
-        self.replay_buffer = ReplayBuffer(size = 48, n_features = self.n_features)
+        self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
 
 
         # Construct Q network optimizer function
@@ -67,7 +67,7 @@ class DQNAgent(rlagent.RLAgent):
 
 
 
-    def update(self, state, action, next_state, reward):
+    def update(self, state, action, next_state, reward, update = False):
 
         features = self.feat_extractor.get_features(state, action)
 
@@ -79,45 +79,54 @@ class DQNAgent(rlagent.RLAgent):
         curr_idx = self.replay_buffer.idx - 1
 
         # Perform the update in a batch. Apply the average error over all fields
-        if(curr_idx % self.learning_freq == 0):
+        # if(update):
+        #     self.perform_update(state.name)
 
-            obs, next_obs, reward = self.replay_buffer.sample(batch_size=48)
 
-            obs_batch = Variable(torch.from_numpy(obs).type(dtype))
-            reward_batch = Variable(torch.from_numpy(reward))
-            next_obs_batch = Variable(torch.from_numpy(next_obs).type(dtype))
+    def perform_update(self, agent_name, reward):
 
-            current_Q_values = self.Q(obs_batch)
-            target_Q_values = self.Q(next_obs_batch).detach()
+        print("Updating network...")
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=48)
 
-            q_value_curr_state = current_Q_values
-            q_value_next_state = reward_batch + (self.discount * target_Q_values)
+        reward = reward * np.ones(obs.shape[0])
 
-            # Compute Bellman error
-            bellman_error = reward + q_value_next_state - q_value_curr_state
+        obs_batch = Variable(torch.from_numpy(obs).type(dtype))
+        reward_batch = Variable(torch.from_numpy(reward).type(dtype))
+        next_obs_batch = Variable(torch.from_numpy(next_obs).type(dtype))
 
-            # clip the bellman error between [-1 , 1]
-            clipped_bellman_error = bellman_error.clamp(-1, 1)
-            print("Bellman Error:", clipped_bellman_error)
+        current_Q_values = self.Q(obs_batch)
+        target_Q_values = self.Q(next_obs_batch).detach()
 
-            d_error = clipped_bellman_error * -1.0
-            print("Delta Error:",d_error)
+        q_value_curr_state = current_Q_values
+        q_value_next_state = reward_batch + (self.discount * target_Q_values)
 
-            self.write_to_file(data=d_error, path_to_file='assets/' + state.name + 'error.csv')
+        # Compute Bellman error
+        bellman_error = q_value_next_state - q_value_curr_state
 
-            # Clear previous gradients before backward pass
-            self.optimizer.zero_grad()
+        # clip the bellman error between [-1 , 1]
+        clipped_bellman_error = bellman_error.clamp(-1, 1)
+        print("Bellman Error:", clipped_bellman_error)
 
-            new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
-            # new_q_value_curr_state.backward()
-            # new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
-            new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
+        d_error = clipped_bellman_error * -1.0
+        print("Delta Error:", d_error)
 
-            # Perfom the update
-            self.optimizer.step()
+        self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
 
-            # Clear stored values in the replay buffer
-            self.replay_buffer.reset()
+        # Clear previous gradients before backward pass
+        self.optimizer.zero_grad()
+
+        new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
+        # new_q_value_curr_state.backward()
+        # new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
+        new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
+
+        # Perfom the update
+        self.optimizer.step()
+
+        # Clear stored values in the replay buffer
+        self.replay_buffer.reset()
+        print("Updating network finished.")
+
 
     def __transform_to_numpy(self, features):
         numpy_arr = np.array(features, dtype=np.float32)

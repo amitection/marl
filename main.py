@@ -107,7 +107,7 @@ def energy_request_handler(agent, message):
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
-    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, update = False)
 
     # Update grid status
     next_state.environment_state.net_grid_status = net_curr_grid_status
@@ -198,23 +198,29 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
                                                                         next_state.environment_state.get_energy_borrowed_from_CG()
                                                                         - l_curr_state.environment_state.get_energy_borrowed_from_CG()))
 
-        agent.log_info('Calculating reward.')
 
-        # Get grid status from CG
-        curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        delta_reward = 0
+        update = False
+        # if (l_curr_state.time == 0 and l_curr_state.time.minute == 0):
+        #     update = True
+        #
+        #     agent.log_info('Calculating reward.')
+        #
+        #     # Get grid status from CG
+        #     curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+        #     net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        #
+        #     # calculate reward
+        #     # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
+        #     delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
+        #     multiprocessing_ns.old_grid_status = net_curr_grid_status
 
-        # calculate reward
-        # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
-        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
 
-        # update agent with reward
-        if (action['action'] != 'consume_and_store'):
-            agent.log_info('Updating agent with reward %s.' % delta_reward)
-            l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+        agent.log_info('Updating agent with reward %s.' % delta_reward)
+        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, update=update)
 
         # Update grid status
-        next_state.environment_state.net_grid_status = net_curr_grid_status
+        # next_state.environment_state.net_grid_status = net_curr_grid_status
 
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
@@ -250,40 +256,55 @@ def eoi_handle(agent, message):
     global g_env_state
     try:
         print("\n\n\-----------------------Iteration (%s) Completed-----------------------\n\n"%message['iter'])
-        agent.log_info("Publishing Stats...")
+
+        # Fetching Reference
+        l_rl_agent = multiprocessing_ns.rl_agent
         l_g_agent_state = multiprocessing_ns.g_agent_state
         g_env_state = l_g_agent_state.environment_state
+
+
+        agent.log_info("Publishing Stats...")
         agent.log_info(g_env_state)
 
         nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
                       - (g_env_state.get_total_consumed() + g_env_state.get_energy_borrowed_from_CG())
         agent.log_info("NZEB Status: %s" % nzeb_status)
 
+
         # Log EOI details to CG
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
-        # agent.log_info('Updating agent with reward %s.' % delta_reward)
-        #
-        # g_agent_state_copy = copy.deepcopy(g_agent_state)
-        # g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
-        #
-        # action = {'action': 'consume_and_store'}
-        # rl_agent.update(state=g_agent_state_copy, action=action, next_state=g_agent_state_copy,
-        #                 reward=delta_reward)
+
+        # --------------------- Updating reward ---------------------
+        agent.log_info('Calculating reward.')
+
+        # Get grid status from CG
+        curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
+        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+
+        # calculate reward
+        delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
+        multiprocessing_ns.old_grid_status = net_curr_grid_status
+        l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = delta_reward)
+        #---------------------------------------------------------------
+
+
+
+        # If training phase done then set exploration to 0
+        # i.e. complete exploitation
+        if message['topic'] == 'TRAINING_COMPLETE':
+            l_rl_agent.epsilon = 0.0
+
 
         # reset the agent global state
+        print(".......................RESETTING GLOBAL STATE.......................")
         l_g_agent_state.reset(float(args.battInit))
         l_g_agent_state.iter = int(message['iter']) + 1
-        print(".......................RESETTING GLOBAL STATE.......................")
-
         agent.log_info(l_g_agent_state.environment_state)
 
-        if message['topic'] == 'TRAINING_COMPLETE':
-            l_rl_agent = multiprocessing_ns.rl_agent
-            l_rl_agent.epsilon = 0.0
-            multiprocessing_ns.rl_agent = l_rl_agent
 
         # Synchronize Objects
+        multiprocessing_ns.rl_agent = l_rl_agent
         multiprocessing_ns.g_agent_state = l_g_agent_state
         agent.log_info("Finished synchronizing objects across forked processes.")
 
@@ -368,6 +389,8 @@ if __name__ == '__main__':
         multiprocessing_ns.g_agent_state = AgentState(name = args.agentname, iter = 0, energy_consumption = 0.0, energy_generation = 0.0,
                                    battery_curr = float(args.battInit), time = '2014/01/01 12:00', environment_state = environment_state,
                                    cg_http_service = cg_http_service)
+
+        multiprocessing_ns.old_grid_status = -99999
 
         global allies
         allies = [ally for ally in args.allies.split(",") ]

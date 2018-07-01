@@ -25,7 +25,7 @@ class RLAgent:
 
 
 
-    def update(self, state, action, next_state, reward):
+    def update(self, state, action, next_state, reward, update = False):
         pass
 
 
