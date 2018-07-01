@@ -291,7 +291,7 @@ def eoi_handle(agent, message):
             multiprocessing_ns.best_grid_status = net_curr_grid_status
             delta_reward += 3
 
-        delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
+        # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
 
         multiprocessing_ns.old_grid_status = net_curr_grid_status
         l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = delta_reward)
