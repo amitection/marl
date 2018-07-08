@@ -36,11 +36,15 @@ class DQNAgent(rlagent.RLAgent):
         print("DQN initiated...")
 
         self.learning_freq = 48
+        self.target_update_freq = 10
+        self.num_updates = 0
+        self.discount = 0.99
 
         self.n_features = self.feat_extractor.get_n_features()
 
         # Instantiating a MLP model
         self.Q = DQN(self.n_features)
+        self.target_Q = DQN(self.n_features)
 
         self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
 
@@ -95,7 +99,7 @@ class DQNAgent(rlagent.RLAgent):
         next_obs_batch = Variable(torch.from_numpy(next_obs).type(dtype))
 
         current_Q_values = self.Q(obs_batch)
-        target_Q_values = self.Q(next_obs_batch).detach()
+        target_Q_values = self.target_Q(next_obs_batch).detach()
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
@@ -126,6 +130,13 @@ class DQNAgent(rlagent.RLAgent):
         # Clear stored values in the replay buffer
         self.replay_buffer.reset()
         print("Updating network finished.")
+
+        self.num_updates += 1
+
+        # Periodically update the target network with the Q network
+        if self.num_updates % self.target_update_freq == 0:
+            self.target_Q.load_state_dict(self.Q.state_dict())
+            print("Updating target Q network finished.")
 
 
     def __transform_to_numpy(self, features):
