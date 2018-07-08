@@ -38,7 +38,7 @@ def energy_request_handler(agent, message):
     while not multiprocessing_lock.acquire(blocking=False):
         try:
             if lock_count <= 3:
-                time.sleep(randint(1, 10) / 10)
+                time.sleep(randint(1, 3) / 10)
                 lock_count += 1
             else:
                 yield {'topic': 'ENERGY_REQUEST_DECLINE'}

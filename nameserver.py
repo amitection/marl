@@ -64,7 +64,7 @@ class NameServer:
             # EOI: notify each agent to save its status at the end of each iteration
             for name in agent_name_arr:
                 self._send_message(server_agent, agent_addr[name], alias='consumption', message=eoi_message)
-            time.sleep(3)
+            time.sleep(4)
 
         # Exit Message after iterations done
         # Safe shutdown of all agents for testing
@@ -87,8 +87,8 @@ class NameServer:
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
 
         try:
-            # for timestep in range(0, 150, 30):
-            for timestep in range(0, 4290, 30):
+            for timestep in range(0, 1200, 30):
+            # for timestep in range(0, 4290, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
@@ -102,7 +102,7 @@ class NameServer:
 
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
-                time.sleep(2)
+                time.sleep(1.2)
 
         except Exception:
             print(traceback.format_exc())

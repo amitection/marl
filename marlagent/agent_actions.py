@@ -39,7 +39,7 @@ def request_ally(ns, agent, agent_name, allies, energy_amt, time):
         # select a random ally
         ally_name =  random.choice(allies_remaining)
 
-        ally_proxy = ns.proxy(name = ally_name, timeout=1.0)
+        ally_proxy = ns.proxy(name = ally_name, timeout=0.5)
         ally_proxy_addr = ally_proxy.addr(alias=str('energy_request_'+ally_name))
 
         message = {
