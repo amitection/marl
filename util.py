@@ -83,6 +83,16 @@ def reward_transaction(state, next_state, action, net_curr_grid_status):
     return reward
 
 
+
+def compare(a, b):
+    if a > b:
+        return 1
+    elif a < b:
+        return -1
+    else:
+        return 0
+
+
 def calc_net_grid_status(curr_grid_status):
     net_curr_grid_status = curr_grid_status['generation'] \
                            - (curr_grid_status['consumption'] - curr_grid_status['borrowedFromCG'])
