@@ -89,10 +89,14 @@ class DQNAgent(rlagent.RLAgent):
 
     def perform_update(self, agent_name, reward):
 
+        #TODO: Ignore reward from EOI handler
+
         print("Updating network...")
         obs, next_obs, r = self.replay_buffer.sample(batch_size=48)
 
-        reward = reward * np.ones(obs.shape[0])
+        #reward = reward * np.zeros(obs.shape[0])
+        # r[r.shape[0] - 1] = reward
+        reward = r
 
         obs_batch = Variable(torch.from_numpy(obs).type(dtype))
         reward_batch = Variable(torch.from_numpy(reward).type(dtype))
@@ -121,7 +125,6 @@ class DQNAgent(rlagent.RLAgent):
 
         new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
         # new_q_value_curr_state.backward()
-        # new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
         new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
 
         # Perfom the update

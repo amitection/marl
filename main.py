@@ -199,28 +199,21 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
                                                                         - l_curr_state.environment_state.get_energy_borrowed_from_CG()))
 
 
-        delta_reward = 0
-        update = False
-        # if (l_curr_state.time == 0 and l_curr_state.time.minute == 0):
-        #     update = True
-        #
-        #     agent.log_info('Calculating reward.')
-        #
-        #     # Get grid status from CG
-        #     curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        #     net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
-        #
-        #     # calculate reward
-        #     # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
-        #     delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
-        #     multiprocessing_ns.old_grid_status = net_curr_grid_status
+        delta_reward = 0.0
+        # Get grid status from CG
+        curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+
+        # calculate reward
+        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action,
+                                                                        net_curr_grid_status)
 
 
         agent.log_info('Updating agent with reward %s.' % delta_reward)
-        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, update=update)
+        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
 
         # Update grid status
-        # next_state.environment_state.net_grid_status = net_curr_grid_status
+        next_state.environment_state.net_grid_status = net_curr_grid_status
 
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
@@ -279,22 +272,22 @@ def eoi_handle(agent, message):
         agent.log_info('Calculating reward.')
 
         # Get grid status from CG
-        curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
-        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        # curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
+        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
         # calculate reward
-        delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
+        # delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
 
 
         # If this grid status is better than the previous best grid status
-        if util.compare(net_curr_grid_status, multiprocessing_ns.best_grid_status) > 1 :
-            multiprocessing_ns.best_grid_status = net_curr_grid_status
-            delta_reward += 3
+        # if util.compare(net_curr_grid_status, multiprocessing_ns.best_grid_status) > 1 :
+        #     multiprocessing_ns.best_grid_status = net_curr_grid_status
+        #     delta_reward += 3
 
         # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
 
-        multiprocessing_ns.old_grid_status = net_curr_grid_status
-        l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = delta_reward)
+        # multiprocessing_ns.old_grid_status = net_curr_grid_status
+        l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = 0)
         #---------------------------------------------------------------
 
 
