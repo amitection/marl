@@ -74,6 +74,6 @@ class ReplayBuffer:
 
         #TODO: Handle unequal sized arrays of obs and next obs
 
-        self.next_obs = self.obs[1:self.idx-1, :]
+        next_obs = np.copy(self.obs[1:self.idx-1, :])
 
-        return self.obs[:self.idx-2, :], self.next_obs, self.reward[:self.idx-1]
+        return self.obs[:self.idx-2, :], next_obs, self.reward[:self.idx-1]

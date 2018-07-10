@@ -36,7 +36,7 @@ class DQNAgent(rlagent.RLAgent):
         print("DQN initiated...")
 
         self.learning_freq = 48
-        self.target_update_freq = 10
+        self.target_update_freq = 3
         self.num_updates = 0
         self.discount = 0.99
 
@@ -56,15 +56,13 @@ class DQNAgent(rlagent.RLAgent):
 
     def get_qValue(self, state, action):
 
-        print("Calling Q VALUE method of DQN")
-
         features = self.feat_extractor.get_features(state, action)
         feat_arr = self.__transform_to_numpy(features)
 
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
-        print("Calculated Q-Value: ",q_values_ts)
+        print("Calculated Q-Value for action ({0}): {1}".format(action['action'], q_values_ts))
 
         # Use volatile = True if variable is only used in inference mode, i.e. don’t save the history
         return q_values_ts
@@ -80,7 +78,7 @@ class DQNAgent(rlagent.RLAgent):
 
         # extract the current index of the replay buffer
         # sub by -1 as the index is incremented after each insertion
-        curr_idx = self.replay_buffer.idx - 1
+        # curr_idx = self.replay_buffer.idx - 1
 
         # Perform the update in a batch. Apply the average error over all fields
         # if(update):
@@ -104,6 +102,8 @@ class DQNAgent(rlagent.RLAgent):
 
         current_Q_values = self.Q(obs_batch)
         target_Q_values = self.target_Q(next_obs_batch).detach()
+        # print("CURRENT Q VALUES:   " + str(current_Q_values))
+        # print("TARGET Q VALUES:   "+str(target_Q_values))
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
@@ -118,7 +118,7 @@ class DQNAgent(rlagent.RLAgent):
         d_error = clipped_bellman_error * -1.0
         print("Delta Error:", d_error)
 
-        self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
+        # self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
 
         # Clear previous gradients before backward pass
         self.optimizer.zero_grad()

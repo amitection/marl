@@ -37,7 +37,7 @@ def energy_request_handler(agent, message):
     lock_count = 0
     while not multiprocessing_lock.acquire(blocking=False):
         try:
-            if lock_count <= 3:
+            if lock_count <= 2:
                 time.sleep(randint(1, 3) / 10)
                 lock_count += 1
             else:
@@ -120,8 +120,8 @@ def energy_request_handler(agent, message):
 
     agent.log_info('Completed update operation. Resting!')
 
-    agent.log_info(next_state)
-    agent.log_info(l_g_agent_state.environment_state)
+    # agent.log_info(next_state)
+    # agent.log_info(l_g_agent_state.environment_state)
 
     print("-----------------------End of Transaction-----------------------\n\n\n")
 
@@ -221,8 +221,8 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
         l_g_agent_state.battery_curr = next_state.battery_curr
         l_g_agent_state.environment_state = next_state.environment_state
 
-        agent.log_info(next_state)
-        agent.log_info(l_g_agent_state.environment_state)
+        # agent.log_info(next_state)
+        # agent.log_info(l_g_agent_state.environment_state)
         agent.log_info('Completed update operation. Resting!')
         print("-----------------------End of Transaction-----------------------\n\n")
 
