@@ -36,7 +36,7 @@ class DQNAgent(rlagent.RLAgent):
         print("DQN initiated...")
 
         self.learning_freq = 48
-        self.target_update_freq = 3
+        self.target_update_freq = 5
         self.num_updates = 0
         self.discount = 0.99
 
