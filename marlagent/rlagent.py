@@ -7,7 +7,7 @@ from marlagent import agent_actions
 
 class RLAgent:
 
-    def __init__(self, alpha=0.001, epsilon=0.2, gamma=0.9, numTraining = 10):
+    def __init__(self, alpha=0.001, epsilon=0.1, gamma=0.9, numTraining = 10):
 
         print("RL agent instantiated...")
         self.alpha = float(alpha) # learning rate
