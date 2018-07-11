@@ -74,7 +74,8 @@ class DQNAgent(rlagent.RLAgent):
         features = self.feat_extractor.get_features(state, action)
 
         # store the converted state in the replay buffer
-        self.replay_buffer.store_transition(features, action, reward)
+        if action['action'] != 'consume_and_store':
+            self.replay_buffer.store_transition(features, action, reward)
 
         # extract the current index of the replay buffer
         # sub by -1 as the index is incremented after each insertion
