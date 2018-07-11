@@ -39,7 +39,7 @@ class NameServer:
             'generation': 0.0
         }
 
-        max_iter = 500
+        max_iter = 300
 
         for iter in range(max_iter):
             message['iter'] = iter
@@ -47,7 +47,7 @@ class NameServer:
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
-            if iter <= (max_iter-6):
+            if iter <= (max_iter-11):
                 eoi_message = {
                     'topic': 'END_OF_ITERATION',
                     'iter': iter,
