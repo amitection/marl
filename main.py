@@ -121,7 +121,7 @@ def energy_request_handler(agent, message):
     agent.log_info('Completed update operation. Resting!')
 
     # agent.log_info(next_state)
-    # agent.log_info(l_g_agent_state.environment_state)
+    agent.log_info(l_g_agent_state.environment_state)
 
     print("-----------------------End of Transaction-----------------------\n\n\n")
 
@@ -287,7 +287,7 @@ def eoi_handle(agent, message):
         # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
 
         # multiprocessing_ns.old_grid_status = net_curr_grid_status
-        l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = 0)
+        # l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = 0)
         #---------------------------------------------------------------
 
 

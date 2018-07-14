@@ -35,9 +35,11 @@ class DQNAgent(rlagent.RLAgent):
         super(DQNAgent, self).__init__()
         print("DQN initiated...")
 
-        self.learning_freq = 48
-        self.target_update_freq = 5
+        self.learning_freq = 10
+        self.learning_starts = 1000
+        self.target_update_freq = 50
         self.num_updates = 0
+        self.num_calls = 0
         self.discount = 0.99
 
         self.n_features = self.feat_extractor.get_n_features()
@@ -46,7 +48,7 @@ class DQNAgent(rlagent.RLAgent):
         self.Q = DQN(self.n_features)
         self.target_Q = DQN(self.n_features)
 
-        self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
+        self.replay_buffer = ReplayBuffer(size = self.learning_starts, n_features = self.n_features)
 
 
         # Construct Q network optimizer function
@@ -75,6 +77,7 @@ class DQNAgent(rlagent.RLAgent):
 
         # store the converted state in the replay buffer
         if action['action'] != 'consume_and_store':
+            self.num_calls += 1
             self.replay_buffer.store_transition(features, action, reward)
 
         # extract the current index of the replay buffer
@@ -82,8 +85,9 @@ class DQNAgent(rlagent.RLAgent):
         # curr_idx = self.replay_buffer.idx - 1
 
         # Perform the update in a batch. Apply the average error over all fields
-        # if(update):
-        #     self.perform_update(state.name)
+
+        if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
+            self.perform_update(state.name)
 
 
     def perform_update(self, agent_name, reward):
@@ -91,7 +95,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=48)
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=128)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
@@ -103,8 +107,6 @@ class DQNAgent(rlagent.RLAgent):
 
         current_Q_values = self.Q(obs_batch)
         target_Q_values = self.target_Q(next_obs_batch).detach()
-        # print("CURRENT Q VALUES:   " + str(current_Q_values))
-        # print("TARGET Q VALUES:   "+str(target_Q_values))
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
