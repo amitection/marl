@@ -48,7 +48,7 @@ class DQNAgent(rlagent.RLAgent):
         self.Q = DQN(self.n_features)
         self.target_Q = DQN(self.n_features)
 
-        self.replay_buffer = ReplayBuffer(size = self.learning_starts, n_features = self.n_features)
+        self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
 
 
         # Construct Q network optimizer function
@@ -87,7 +87,7 @@ class DQNAgent(rlagent.RLAgent):
         # Perform the update in a batch. Apply the average error over all fields
 
         if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
-            self.perform_update(state.name)
+            self.perform_update(state.name, reward = 0)
 
 
     def perform_update(self, agent_name, reward):
@@ -95,7 +95,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=128)
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=64)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
@@ -108,18 +108,24 @@ class DQNAgent(rlagent.RLAgent):
         current_Q_values = self.Q(obs_batch)
         target_Q_values = self.target_Q(next_obs_batch).detach()
 
+        # print("CURR Q VALUE:", current_Q_values)
+        # print("TARGET Q VALUE:", target_Q_values)
+        # print("REWARD BATCH", reward_batch)
+
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
+        # print("Q VALUE NEXT STATE:", q_value_next_state)
 
         # Compute Bellman error
         bellman_error = q_value_next_state - q_value_curr_state
+        # print("BELLMAN ERROR:", bellman_error)
 
         # clip the bellman error between [-1 , 1]
         clipped_bellman_error = bellman_error.clamp(-1, 1)
         print("Bellman Error:", clipped_bellman_error)
 
         d_error = clipped_bellman_error * -1.0
-        print("Delta Error:", d_error)
+        # print("Delta Error:", d_error)
 
         # self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
 
@@ -134,7 +140,7 @@ class DQNAgent(rlagent.RLAgent):
         self.optimizer.step()
 
         # Clear stored values in the replay buffer
-        self.replay_buffer.reset()
+        # self.replay_buffer.reset()
         print("Updating network finished.")
 
         self.num_updates += 1

@@ -83,11 +83,11 @@ class ReplayBuffer:
         # Extract the radom indexes of batch_size from the number of elements in the buffer
         idxes = sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 2), batch_size)
 
-        obs = np.concatenate([ self.obs[idx] for idx in idxes], 0)
+        obs = np.concatenate([[self.obs[idx]] for idx in idxes], 0)
         next_obs = np.copy(obs[1:, :])
-        reward = np.concatenate([self.reward[idx] for idx in idxes],0)
+        reward = np.array([np.array([self.reward[idx]]) for idx in idxes])
 
-        return obs[:-1, :], next_obs, reward
+        return obs[:-1, :], next_obs, reward[:-1,:]
 
 
 
