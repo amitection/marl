@@ -66,18 +66,12 @@ class ReplayBuffer:
         -------
         obs_batch: np.array
             Array of shape
-            (batch_size, img_c * frame_history_len, img_h, img_w)
-            and dtype np.uint8
         act_batch: np.array
             Array of shape (batch_size,) and dtype np.int32
         rew_batch: np.array
             Array of shape (batch_size,) and dtype np.float32
         next_obs_batch: np.array
-            Array of shape
-            (batch_size, img_c * frame_history_len, img_h, img_w)
-            and dtype np.uint8
-        done_mask: np.array
-            Array of shape (batch_size,) and dtype np.float32
+
         """
 
         # Extract the radom indexes of batch_size from the number of elements in the buffer
@@ -87,8 +81,34 @@ class ReplayBuffer:
         next_obs = np.copy(obs[1:, :])
         reward = np.array([np.array([self.reward[idx]]) for idx in idxes])
 
-        return obs[:-1, :], next_obs, reward[:-1,:]
+        obs = obs[:-1, :]
+        next_obs = next_obs
+        reward = reward[:-1,:]
 
+        # sample the latest observation and add it to this batch
+        # Combined experience replay
+        l_obs, l_next_obs, l_reward =  self.__get_latest_obs()
+        obs = np.concatenate([obs, [l_obs]], 0)
+        next_obs = np.concatenate([next_obs, [l_next_obs]], 0)
+        print("REWARDDDDDDD SHAPE------", reward.shape)
+        reward = np.concatenate([reward, [[l_reward]]])
+
+        return obs, next_obs, reward
+
+
+    def __get_latest_obs(self):
+
+        if self.idx == 0:
+            prev_idx = self.size - 2
+            next_idx = prev_idx + 1
+        elif self.idx - 2 < 0:
+            prev_idx = self.size - 1
+            next_idx = 0
+        else:
+            prev_idx = self.idx - 2
+            next_idx = prev_idx + 1
+
+        return self.obs[prev_idx], self.obs[next_idx], self.reward[prev_idx]
 
 
 def sample_n_unique(sampling_f, n):

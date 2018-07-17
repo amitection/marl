@@ -35,8 +35,8 @@ class DQNAgent(rlagent.RLAgent):
         super(DQNAgent, self).__init__()
         print("DQN initiated...")
 
-        self.learning_freq = 10
-        self.learning_starts = 1000
+        self.learning_freq = 3
+        self.learning_starts = 30
         self.target_update_freq = 50
         self.num_updates = 0
         self.num_calls = 0
@@ -48,7 +48,7 @@ class DQNAgent(rlagent.RLAgent):
         self.Q = DQN(self.n_features)
         self.target_Q = DQN(self.n_features)
 
-        self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
+        self.replay_buffer = ReplayBuffer(size = 50, n_features = self.n_features)
 
 
         # Construct Q network optimizer function
@@ -62,6 +62,7 @@ class DQNAgent(rlagent.RLAgent):
         feat_arr = self.__transform_to_numpy(features)
 
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
+        print(state_ts)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
         print("Calculated Q-Value for action ({0}): {1}".format(action['action'], q_values_ts))
@@ -95,7 +96,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=64)
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=16)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
@@ -122,19 +123,20 @@ class DQNAgent(rlagent.RLAgent):
 
         # clip the bellman error between [-1 , 1]
         clipped_bellman_error = bellman_error.clamp(-1, 1)
-        print("Bellman Error:", clipped_bellman_error)
+        # print("Bellman Error:", clipped_bellman_error)
 
         d_error = clipped_bellman_error * -1.0
-        # print("Delta Error:", d_error)
+        # print("Delta Error:", d_error.data.unsqueeze(1))
+        print("Delta Error:", d_error.data.mean())
 
-        # self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
+        self.write_to_file(data=d_error.mean(), path_to_file='assets/' + agent_name + 'error.csv')
 
         # Clear previous gradients before backward pass
         self.optimizer.zero_grad()
 
         new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
         # new_q_value_curr_state.backward()
-        new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
+        new_q_value_curr_state.backward(d_error.data)
 
         # Perfom the update
         self.optimizer.step()
