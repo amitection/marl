@@ -39,7 +39,7 @@ class NameServer:
             'generation': 0.0
         }
 
-        max_iter = 300
+        max_iter = 1000
 
         for iter in range(max_iter):
             message['iter'] = iter

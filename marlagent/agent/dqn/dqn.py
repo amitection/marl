@@ -35,9 +35,11 @@ class DQNAgent(rlagent.RLAgent):
         super(DQNAgent, self).__init__()
         print("DQN initiated...")
 
-        self.learning_freq = 48
-        self.target_update_freq = 5
+        self.learning_freq = 10
+        self.learning_starts = 1000
+        self.target_update_freq = 50
         self.num_updates = 0
+        self.num_calls = 0
         self.discount = 0.99
 
         self.n_features = self.feat_extractor.get_n_features()
@@ -60,6 +62,7 @@ class DQNAgent(rlagent.RLAgent):
         feat_arr = self.__transform_to_numpy(features)
 
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
+        print(state_ts)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
         print("Calculated Q-Value for action ({0}): {1}".format(action['action'], q_values_ts))
@@ -74,16 +77,18 @@ class DQNAgent(rlagent.RLAgent):
         features = self.feat_extractor.get_features(state, action)
 
         # store the converted state in the replay buffer
-        if action['action'] != 'consume_and_store':
-            self.replay_buffer.store_transition(features, action, reward)
+        # if action['action'] != 'consume_and_store':
+        self.num_calls += 1
+        self.replay_buffer.store_transition(features, action, reward)
 
         # extract the current index of the replay buffer
         # sub by -1 as the index is incremented after each insertion
         # curr_idx = self.replay_buffer.idx - 1
 
         # Perform the update in a batch. Apply the average error over all fields
-        # if(update):
-        #     self.perform_update(state.name)
+
+        if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
+            self.perform_update(state.name, reward = 0)
 
 
     def perform_update(self, agent_name, reward):
@@ -91,7 +96,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=48)
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=64)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
@@ -103,36 +108,41 @@ class DQNAgent(rlagent.RLAgent):
 
         current_Q_values = self.Q(obs_batch)
         target_Q_values = self.target_Q(next_obs_batch).detach()
-        # print("CURRENT Q VALUES:   " + str(current_Q_values))
-        # print("TARGET Q VALUES:   "+str(target_Q_values))
+
+        # print("CURR Q VALUE:", current_Q_values)
+        # print("TARGET Q VALUE:", target_Q_values)
+        # print("REWARD BATCH", reward_batch)
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
+        # print("Q VALUE NEXT STATE:", q_value_next_state)
 
         # Compute Bellman error
         bellman_error = q_value_next_state - q_value_curr_state
+        # print("BELLMAN ERROR:", bellman_error)
 
         # clip the bellman error between [-1 , 1]
         clipped_bellman_error = bellman_error.clamp(-1, 1)
-        print("Bellman Error:", clipped_bellman_error)
+        # print("Bellman Error:", clipped_bellman_error)
 
         d_error = clipped_bellman_error * -1.0
-        print("Delta Error:", d_error)
+        # print("Delta Error:", d_error.data.unsqueeze(1))
+        print("Delta Error:", d_error.data.mean())
 
-        # self.write_to_file(data=d_error, path_to_file='assets/' + agent_name + 'error.csv')
+        self.write_to_file(data=d_error.mean(), path_to_file='assets/' + agent_name + 'error.csv')
 
         # Clear previous gradients before backward pass
         self.optimizer.zero_grad()
 
         new_q_value_curr_state = Variable(q_value_curr_state.data, requires_grad=True)
         # new_q_value_curr_state.backward()
-        new_q_value_curr_state.backward(d_error.data.unsqueeze(1))
+        new_q_value_curr_state.backward(d_error.data)
 
         # Perfom the update
         self.optimizer.step()
 
         # Clear stored values in the replay buffer
-        self.replay_buffer.reset()
+        # self.replay_buffer.reset()
         print("Updating network finished.")
 
         self.num_updates += 1
