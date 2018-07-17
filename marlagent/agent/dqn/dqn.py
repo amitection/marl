@@ -35,8 +35,8 @@ class DQNAgent(rlagent.RLAgent):
         super(DQNAgent, self).__init__()
         print("DQN initiated...")
 
-        self.learning_freq = 3
-        self.learning_starts = 30
+        self.learning_freq = 10
+        self.learning_starts = 1000
         self.target_update_freq = 50
         self.num_updates = 0
         self.num_calls = 0
@@ -48,7 +48,7 @@ class DQNAgent(rlagent.RLAgent):
         self.Q = DQN(self.n_features)
         self.target_Q = DQN(self.n_features)
 
-        self.replay_buffer = ReplayBuffer(size = 50, n_features = self.n_features)
+        self.replay_buffer = ReplayBuffer(size = 10000, n_features = self.n_features)
 
 
         # Construct Q network optimizer function
@@ -77,9 +77,9 @@ class DQNAgent(rlagent.RLAgent):
         features = self.feat_extractor.get_features(state, action)
 
         # store the converted state in the replay buffer
-        if action['action'] != 'consume_and_store':
-            self.num_calls += 1
-            self.replay_buffer.store_transition(features, action, reward)
+        # if action['action'] != 'consume_and_store':
+        self.num_calls += 1
+        self.replay_buffer.store_transition(features, action, reward)
 
         # extract the current index of the replay buffer
         # sub by -1 as the index is incremented after each insertion
@@ -96,7 +96,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=16)
+        obs, next_obs, r = self.replay_buffer.sample(batch_size=64)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
