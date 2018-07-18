@@ -36,7 +36,7 @@ class DQNAgent(rlagent.RLAgent):
         print("DQN initiated...")
 
         self.learning_freq = 10
-        self.learning_starts = 50
+        self.learning_starts = 1000
         self.target_update_freq = 50
         self.num_updates = 0
         self.num_calls = 0
@@ -95,7 +95,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r, eoi = self.replay_buffer.sample(batch_size=16)
+        obs, next_obs, r, eoi = self.replay_buffer.sample(batch_size=64)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
