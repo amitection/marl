@@ -62,7 +62,6 @@ class DQNAgent(rlagent.RLAgent):
         feat_arr = self.__transform_to_numpy(features)
 
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
-        print(state_ts)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
         print("Calculated Q-Value for action ({0}): {1}".format(action['action'], q_values_ts))
