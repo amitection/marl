@@ -107,7 +107,7 @@ def energy_request_handler(agent, message):
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
-    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, eoi = False)
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0, eoi = False)
 
     # Update grid status
     next_state.environment_state.net_grid_status = net_curr_grid_status
@@ -210,7 +210,7 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
 
 
         agent.log_info('Updating agent with reward %s.' % delta_reward)
-        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0)
 
         # Update grid status
         next_state.environment_state.net_grid_status = net_curr_grid_status
