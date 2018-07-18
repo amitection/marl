@@ -36,7 +36,7 @@ class DQNAgent(rlagent.RLAgent):
         print("DQN initiated...")
 
         self.learning_freq = 10
-        self.learning_starts = 1000
+        self.learning_starts = 50
         self.target_update_freq = 50
         self.num_updates = 0
         self.num_calls = 0
@@ -72,20 +72,19 @@ class DQNAgent(rlagent.RLAgent):
 
 
 
-    def update(self, state, action, next_state, reward, update = False):
+    def update(self, state, action, next_state, reward, eoi = False):
 
-        features = self.feat_extractor.get_features(state, action)
+        if eoi == True:
+            self.replay_buffer.update_last_transition_with_reward(reward)
+        else:
+            features = self.feat_extractor.get_features(state, action)
 
-        # store the converted state in the replay buffer
-        # if action['action'] != 'consume_and_store':
-        self.num_calls += 1
-        self.replay_buffer.store_transition(features, action, reward)
+            # store the converted state in the replay buffer
+            # if action['action'] != 'consume_and_store':
+            self.num_calls += 1
+            self.replay_buffer.store_transition(features, action, reward)
 
-        # extract the current index of the replay buffer
-        # sub by -1 as the index is incremented after each insertion
-        # curr_idx = self.replay_buffer.idx - 1
-
-        # Perform the update in a batch. Apply the average error over all fields
+            # Perform the update in a batch. Apply the average error over all fields
 
         if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
             self.perform_update(state.name, reward = 0)
@@ -96,7 +95,7 @@ class DQNAgent(rlagent.RLAgent):
         #TODO: Ignore reward from EOI handler
 
         print("Updating network...")
-        obs, next_obs, r = self.replay_buffer.sample(batch_size=64)
+        obs, next_obs, r, eoi = self.replay_buffer.sample(batch_size=16)
 
         #reward = reward * np.zeros(obs.shape[0])
         # r[r.shape[0] - 1] = reward
@@ -105,13 +104,17 @@ class DQNAgent(rlagent.RLAgent):
         obs_batch = Variable(torch.from_numpy(obs).type(dtype))
         reward_batch = Variable(torch.from_numpy(reward).type(dtype))
         next_obs_batch = Variable(torch.from_numpy(next_obs).type(dtype))
+        not_eoi = Variable(torch.from_numpy(1 - eoi)).type(dtype)
 
         current_Q_values = self.Q(obs_batch)
         target_Q_values = self.target_Q(next_obs_batch).detach()
+        target_Q_values = target_Q_values * not_eoi
 
         # print("CURR Q VALUE:", current_Q_values)
         # print("TARGET Q VALUE:", target_Q_values)
         # print("REWARD BATCH", reward_batch)
+        print("Not EOI", not_eoi)
+
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)

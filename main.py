@@ -107,7 +107,7 @@ def energy_request_handler(agent, message):
     agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
-    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, update = False)
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward, eoi = False)
 
     # Update grid status
     next_state.environment_state.net_grid_status = net_curr_grid_status
@@ -272,8 +272,8 @@ def eoi_handle(agent, message):
         agent.log_info('Calculating reward.')
 
         # Get grid status from CG
-        # curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
-        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
+        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
         # calculate reward
         # delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
@@ -287,7 +287,7 @@ def eoi_handle(agent, message):
         # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
 
         # multiprocessing_ns.old_grid_status = net_curr_grid_status
-        # l_rl_agent.perform_update(agent_name = l_g_agent_state.name, reward = 0)
+        l_rl_agent.update(state=None, action=None, next_state=None, reward=net_curr_grid_status, eoi = True)
         #---------------------------------------------------------------
 
 

@@ -20,6 +20,7 @@ class ReplayBuffer:
         self.obs = None
         self.action = None
         self.reward = None
+        self.eoi = None
 
 
     def store_transition(self, state, action, reward):
@@ -28,11 +29,12 @@ class ReplayBuffer:
             self.obs        = np.empty([self.size, self.n_features],        dtype=np.float32)
             self.action     = np.empty([self.size],                         dtype=np.str)
             self.reward     = np.empty([self.size],                         dtype=np.float32)
-
+            self.eoi        = np.empty([self.size],                         dtype=np.float32)
 
         self.obs[self.idx] = state
         self.action[self.idx] = action['action']
         self.reward[self.idx] = reward
+        self.eoi[self.idx] = 0.0
 
         # set the next idx
         # starts from 1st position and overwrites if buffer full
@@ -48,6 +50,7 @@ class ReplayBuffer:
         self.obs = np.empty([self.size, self.n_features], dtype=np.float32)
         self.action = np.empty([self.size], dtype=np.str)
         self.reward = np.empty([self.size], dtype=np.float32)
+        self.eoi = np.empty([self.size], dtype=np.float32)
 
 
     def sample(self, batch_size):
@@ -80,24 +83,46 @@ class ReplayBuffer:
         obs = np.concatenate([[self.obs[idx]] for idx in idxes], 0)
         next_obs = np.copy(obs[1:, :])
         reward = np.array([np.array([self.reward[idx]]) for idx in idxes])
+        eoi = np.array([np.array([self.eoi[idx]]) for idx in idxes])
 
         obs = obs[:-1, :]
         next_obs = next_obs
         reward = reward[:-1,:]
+        eoi = eoi[:-1,:]
 
         # sample the latest observation and add it to this batch
         # Combined experience replay
-        l_obs, l_next_obs, l_reward =  self.__get_latest_obs()
+        l_obs, l_next_obs, l_reward, l_eoi =  self.__get_latest_obs()
         obs = np.concatenate([obs, [l_obs]], 0)
         next_obs = np.concatenate([next_obs, [l_next_obs]], 0)
-        print("REWARDDDDDDD SHAPE------", reward.shape)
         reward = np.concatenate([reward, [[l_reward]]])
+        eoi = np.concatenate([eoi, [[l_eoi]]])
 
-        return obs, next_obs, reward
+        return obs, next_obs, reward, eoi
 
 
     def __get_latest_obs(self):
+        '''
+        Fetches the last observation. Helper function
+        for Combined experience replay.
+        :return: Returns a (s,s',r) tuple
+        '''
+        prev_idx, next_idx = self.__get_last_transition_idxs()
 
+        return self.obs[prev_idx], self.obs[next_idx], self.reward[prev_idx], self.eoi[prev_idx]
+
+
+    def update_last_transition_with_reward(self, reward):
+        '''
+        Support for EOI rewards
+        :return:
+        '''
+        prev_idx, next_idx = self.__get_last_transition_idxs()
+        self.reward[prev_idx] = reward
+
+
+
+    def __get_last_transition_idxs(self):
         if self.idx == 0:
             prev_idx = self.size - 2
             next_idx = prev_idx + 1
@@ -108,7 +133,7 @@ class ReplayBuffer:
             prev_idx = self.idx - 2
             next_idx = prev_idx + 1
 
-        return self.obs[prev_idx], self.obs[next_idx], self.reward[prev_idx]
+        return prev_idx, next_idx
 
 
 def sample_n_unique(sampling_f, n):

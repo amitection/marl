@@ -82,7 +82,7 @@ def reward_transaction(state, next_state, action, net_curr_grid_status):
 
     #OR
 
-    reward = net_curr_grid_status - state.environment_state.net_grid_status
+    reward = net_curr_grid_status
 
     return round(reward,1)
 

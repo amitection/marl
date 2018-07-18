@@ -61,6 +61,7 @@ class NameServer:
                     'time': last_message['time']
                 }
 
+            time.sleep(2)
             # EOI: notify each agent to save its status at the end of each iteration
             for name in agent_name_arr:
                 self._send_message(server_agent, agent_addr[name], alias='consumption', message=eoi_message)
