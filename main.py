@@ -98,19 +98,19 @@ def energy_request_handler(agent, message):
                                                                        energy_grant))
 
     # Get grid status from CG
-    curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-    net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+    # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+    # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
     # calculate reward
-    delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
+    # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
 
-    agent.log_info('Updating agent with delta reward %s.' % delta_reward)
+    # agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
-    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0, eoi = False)
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0, eoi = False)
 
     # Update grid status
-    next_state.environment_state.net_grid_status = net_curr_grid_status
+    # next_state.environment_state.net_grid_status = net_curr_grid_status
 
     # update the global state
     l_g_agent_state.energy_consumption = 0.0
@@ -201,19 +201,19 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
 
         delta_reward = 0.0
         # Get grid status from CG
-        curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
         # calculate reward
-        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action,
-                                                                        net_curr_grid_status)
+        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action,
+        #                                                                 net_curr_grid_status)
 
 
         agent.log_info('Updating agent with reward %s.' % delta_reward)
-        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0)
+        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0)
 
         # Update grid status
-        next_state.environment_state.net_grid_status = net_curr_grid_status
+        # next_state.environment_state.net_grid_status = net_curr_grid_status
 
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
@@ -287,7 +287,9 @@ def eoi_handle(agent, message):
         # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
 
         # multiprocessing_ns.old_grid_status = net_curr_grid_status
-        l_rl_agent.update(state=None, action=None, next_state=None, reward=net_curr_grid_status, eoi = True)
+
+        delta_reward = util.reward_transaction(state = None, next_state = None, action = None, net_curr_grid_status = net_curr_grid_status)
+        l_rl_agent.update(state=None, action=None, next_state=None, reward=delta_reward, eoi = True)
         #---------------------------------------------------------------
 
 
