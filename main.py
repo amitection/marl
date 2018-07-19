@@ -293,6 +293,9 @@ def eoi_handle(agent, message):
         #---------------------------------------------------------------
 
 
+        if int(message['iter']) > 0 and int(message['iter']) % 100 == 0:
+            l_rl_agent.epsilon = round(l_rl_agent.epsilon * 0.8, 5)
+
 
         # If training phase done then set exploration to 0
         # i.e. complete exploitation
