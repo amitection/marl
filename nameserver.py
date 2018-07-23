@@ -89,7 +89,7 @@ class NameServer:
 
         try:
             # for timestep in range(0, 1200, 30):
-            for timestep in range(0, 4290, 30):
+            for timestep in range(10080, 20130, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
