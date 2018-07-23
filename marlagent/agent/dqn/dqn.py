@@ -56,7 +56,7 @@ class DQNAgent(rlagent.RLAgent):
 
 
         # Construct Q network optimizer function
-        self.optimizer_spec = optimizer_spec.constructor(self.Q.parameters(), **optimizer_spec.kwargs)
+        self.optimizer = optimizer_spec.constructor(self.Q.parameters(), **optimizer_spec.kwargs)
 
 
 
