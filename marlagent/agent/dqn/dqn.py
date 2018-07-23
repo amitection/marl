@@ -26,7 +26,7 @@ OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 optimizer_spec = OptimizerSpec(
         constructor=optim.RMSprop,
         kwargs=dict(lr=0.00025),
-    )s
+    )
 
 
 class DQNAgent(rlagent.RLAgent):
