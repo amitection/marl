@@ -25,7 +25,7 @@ OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
 optimizer_spec = OptimizerSpec(
         constructor=optim.RMSprop,
-        kwargs=dict(lr=0.00025),
+        kwargs=dict(lr=0.00025, alpha=0.95, eps=0.01),
     )
 
 
