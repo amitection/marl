@@ -290,7 +290,7 @@ def eoi_handle(agent, message):
 
         delta_reward = util.reward_transaction(state = None, next_state = None, action = None, net_curr_grid_status = net_curr_grid_status)
         l_rl_agent.update(state=None, action=None, next_state=None, reward=delta_reward, eoi = True)
-        # ---------------------------------------------------------------
+        #---------------------------------------------------------------
 
 
         if int(message['iter']) > 0 and int(message['iter']) % 100 == 0:
@@ -301,9 +301,6 @@ def eoi_handle(agent, message):
         # i.e. complete exploitation
         if message['topic'] == 'TRAINING_COMPLETE':
             l_rl_agent.epsilon = 0.0
-
-            if args.tag is not 'notag':
-                l_rl_agent.save_model_to_file(args.tag)
 
 
         # reset the agent global state
@@ -324,7 +321,6 @@ def eoi_handle(agent, message):
     finally:
         # Release the lock
         multiprocessing_lock.release()
-
 
 def predict_energy_generation(time):
     print("TBD")
@@ -351,7 +347,6 @@ def args_handler():
     parser = argparse.ArgumentParser(description='Agent Module')
 
     parser.add_argument('--agentname', required=True, help='Name of the agent')
-    parser.add_argument('--tag', required=False, default='notag', help='Appropriate tagname')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
     parser.add_argument('--allies', required=False, help='Socket address of the nameserver')
     parser.add_argument('--battInit', required=True, help='Initial battery charge.')
@@ -389,7 +384,7 @@ if __name__ == '__main__':
         multiprocessing_ns = manager.Namespace()
         multiprocessing_lock = manager.RLock()
 
-        multiprocessing_ns.rl_agent = DQNAgent(args.agentname)
+        multiprocessing_ns.rl_agent = DQNAgent()
         # multiprocessing_ns.rl_agent = LinearQAgent()
 
         global energy_generator

@@ -1,7 +1,6 @@
 from collections import namedtuple
 
 import numpy as np
-import os
 import torch
 import torch.autograd as autograd
 import torch.optim as optim
@@ -31,13 +30,10 @@ optimizer_spec = OptimizerSpec(
 
 class DQNAgent(rlagent.RLAgent):
 
-    def __init__(self, agent_name):
+    def __init__(self):
 
         super(DQNAgent, self).__init__()
         print("DQN initiated...")
-
-        self.agent_name = agent_name
-        self.saved_model = False
 
         self.learning_freq = 10
         self.learning_starts = 1000
@@ -116,6 +112,8 @@ class DQNAgent(rlagent.RLAgent):
         # print("CURR Q VALUE:", current_Q_values)
         # print("TARGET Q VALUE:", target_Q_values)
         # print("REWARD BATCH", reward_batch)
+        print("Not EOI", not_eoi)
+
 
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
@@ -160,22 +158,3 @@ class DQNAgent(rlagent.RLAgent):
     def __transform_to_numpy(self, features):
         numpy_arr = np.array(features, dtype=np.float32)
         return numpy_arr
-
-
-    def save_model_to_file(self, tag):
-
-        Q_filename = './serialized-models/'+tag+'-'+'Q-'+self.agent_name+'.model'
-        target_Q_filename = './serialized-models/'+tag+'-'+'targetQ-'+self.agent_name+'.model'
-
-        if not os.path.exists(Q_filename):
-            with open(Q_filename, 'wb') as f:
-                torch.save(self.Q, f)
-
-            with open(target_Q_filename, 'wb') as f:
-                torch.save(self.target_Q, f)
-
-
-    def load_model_from_file(self, tag):
-
-        self.Q = torch.load('./serialized-models/'+tag+'-'+'Q-'+self.agent_name+'.model');
-        self.target_Q = torch.load('./serialized-models/' + tag + '-' + 'Q-' + self.agent_name + '.model');

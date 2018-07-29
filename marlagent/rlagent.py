@@ -7,12 +7,13 @@ from marlagent import agent_actions
 
 class RLAgent:
 
-    def __init__(self, alpha=0.001, epsilon=1.0, gamma=0.9):
+    def __init__(self, alpha=0.001, epsilon=1.0, gamma=0.9, numTraining = 10):
 
         print("RL agent instantiated...")
         self.alpha = float(alpha) # learning rate
         self.epsilon = float(epsilon) # exploration vs exploitation
         self.discount = float(gamma) # significance of future rewards
+        self.numTraining = int(numTraining)
 
         self.feat_extractor = fe.FeatureExtractor()
         self.central_grid = util.Counter() # note the energy borrowed from central grid
