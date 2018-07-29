@@ -39,7 +39,7 @@ class NameServer:
             'generation': 0.0
         }
 
-        max_iter = 1000
+        max_iter = 500
 
         for iter in range(max_iter):
             message['iter'] = iter
@@ -89,7 +89,7 @@ class NameServer:
 
         try:
             # for timestep in range(0, 1200, 30):
-            for timestep in range(0, 4290, 30):
+            for timestep in range(7200, 11490, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
