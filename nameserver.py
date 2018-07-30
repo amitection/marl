@@ -103,7 +103,7 @@ class NameServer:
 
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
-                time.sleep(1.5)
+                time.sleep(1)
 
         except Exception:
             print(traceback.format_exc())

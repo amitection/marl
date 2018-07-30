@@ -35,7 +35,7 @@ class AgentState:
             if(self.energy_generation + self.battery_curr > self.energy_consumption):
                 possible_actions.append({'action':'consume_and_store', 'data':None})
             else:
-                possible_actions.append({'action':'request_ally', 'data':None})
+                # possible_actions.append({'action':'request_ally', 'data':None})
                 possible_actions.append({'action':'request_grid', 'data':None})
 
         else:
@@ -46,7 +46,9 @@ class AgentState:
                     if action['action'] == 'deny_request':
                         possible_actions.append(action)
             else:
-                possible_actions = actions
+                for action in actions:
+                    if action['action'] == 'deny_request':
+                        possible_actions.append(action)
 
         return possible_actions
 
