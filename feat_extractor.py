@@ -1,5 +1,7 @@
 import util
 import numpy as np
+from state import EnvironmentState
+from datetime import datetime
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from state import AgentState
 
@@ -11,15 +13,6 @@ class FeatureExtractor:
 
 
     def _train(self):
-
-        # self.ohe_hour = OneHotEncoder(sparse=False)
-        # self.ohe_hour.fit(np.array(range(0,48)))
-        #
-        # self.ohe_month = OneHotEncoder(sparse=False)
-        # self.ohe_month.fit(np.array(range(0, 12)))
-        #
-        # self.ohe_day = OneHotEncoder(sparse=False)
-        # self.ohe_day.fit(np.array(range(0, 31)))
 
         train_x = np.zeros(shape=[365 * 48, 2])
 
@@ -49,10 +42,38 @@ class FeatureExtractor:
         :return: a list of feature values
         '''
 
+        features = self.encode_state(state)
+
+        # ---------------- ENCODING ACTIONS ----------------
+        # Modelling energy request data
+        if action['action'] == 'grant' or action['action'] == 'deny_request':
+            # TODO: Discritize by observing the values of data
+            features.append(int(action['data']/0.2))
+
+        else:
+            features.append(0)
+
+        action_trans = self.ohe_actions.transform(self.lb_actions.transform([action['action']]).reshape(1,-1))
+        for f in action_trans[0]:
+            features.append(f)
+        # ------------------------------------------------
+
+        #return self.__encode_features_to_Counter(features)
+
+        return features
+
+
+    def encode_state(self, state):
+        '''
+        Encode the state variable into n features
+        :param state:
+        :return:
+        '''
+
         time_feat = util.Counter()
         time_feat['hour'] = (state.time.time().hour * 60 + state.time.time().minute) // 30
-        time_feat['dayofweek'] = state.time.weekday() # monday = 0
-        #time_feat['month'] = state.time.month - 1
+        time_feat['dayofweek'] = state.time.weekday()  # monday = 0
+        # time_feat['month'] = state.time.month - 1
 
         # Transform and avoid the dummy variable trap
         features = self.ohe_time.transform(np.array([time_feat['hour'], time_feat['dayofweek']])
@@ -60,33 +81,43 @@ class FeatureExtractor:
 
         features = list(features[0])
 
-        features.append(self.encode_energy(state.energy_consumption))
-        features.append(self.encode_energy(state.energy_generation))
-        features.append(self.encode_energy(state.battery_curr))
+        features.append(self.__encode_energy(state.energy_consumption))
+        features.append(self.__encode_energy(state.energy_generation))
+        features.append(self.__encode_energy(state.battery_curr))
+
+        return features
 
 
-        # TODO Embed action as a feature into this
-        # Modelling energy request data
-        if action['action'] == 'grant' or action['action'] == 'deny_request':
-            features.append(action['data'])
-        else:
-            features.append(0)
-
-        action_trans = self.ohe_actions.transform(self.lb_actions.transform([action['action']]).reshape(1,-1))
-        for f in action_trans[0]:
-            features.append(f)
-
-
+    def __encode_features_to_Counter(self, features):
         # Transforming into apt data structure
         feat_dict = util.Counter()
         for i in range(len(features)):
-            feat_dict['f_'+str(i)] = float(features[i])
+            feat_dict['f_' + str(i)] = float(features[i])
 
-        #print(feat_dict)
+        # print(feat_dict)
         return feat_dict
 
 
-    def encode_energy(self, energy):
+    def get_n_features(self):
+        '''
+        Simulates a fake agent state and returns the numbers of features.
+        :param state:
+        :return:
+        '''
+
+        environment_state = EnvironmentState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        fake_agent_state = AgentState(name='Test', iter =0, energy_consumption=0.0, energy_generation=0.0,
+                                      battery_curr=float(5), time=datetime.now(),
+                                      environment_state=environment_state,
+                                      cg_http_service=None)
+        action = {}
+        action['action'] = 'consume_and_store'
+        features = self.get_features(fake_agent_state, action)
+
+        return len(features)
+
+
+    def __encode_energy(self, energy):
         if energy == 0.0:
             return 0
         elif energy < 1.0:
@@ -95,3 +126,5 @@ class FeatureExtractor:
             return 2.0
         else:
             return 3
+
+

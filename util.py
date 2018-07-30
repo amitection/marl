@@ -76,11 +76,25 @@ def reward_transaction(state, next_state, action, net_curr_grid_status):
 
     # Community NZEB state
 
+    # If the total grid nZEB status is better than the previous status
+    # if(net_curr_grid_status > state.environment_state.net_grid_status):
+    #     reward += 1
 
-    if(net_curr_grid_status > state.environment_state.net_grid_status):
-        reward += 1
+    #OR
 
-    return reward
+    reward = net_curr_grid_status
+
+    return round(reward,1)
+
+
+
+def compare(a, b):
+    if a > b:
+        return 1
+    elif a < b:
+        return -1
+    else:
+        return 0
 
 
 def calc_net_grid_status(curr_grid_status):
