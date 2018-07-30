@@ -1,13 +1,13 @@
+import os
 import util
 import random
 import copy
-import math
 import feat_extractor as fe
 from marlagent import agent_actions
 
 class RLAgent:
 
-    def __init__(self, alpha=0.001, epsilon=0.2, gamma=0.9, numTraining = 10):
+    def __init__(self, alpha=0.001, epsilon=1.0, gamma=0.9, numTraining = 10):
 
         print("RL agent instantiated...")
         self.alpha = float(alpha) # learning rate
@@ -15,29 +15,19 @@ class RLAgent:
         self.discount = float(gamma) # significance of future rewards
         self.numTraining = int(numTraining)
 
-        self.weights = util.Counter()
         self.feat_extractor = fe.FeatureExtractor()
         self.central_grid = util.Counter() # note the energy borrowed from central grid
 
 
+
     def get_qValue(self, state, action):
-        """
-        Should return Q(state,action) = w * featureVector
-        where * is the dotProduct operator
+        pass
 
-        :param state:
-        :param action:
-        :return:
-        """
-        features = self.feat_extractor.get_features(state, action)
 
-        q_value = 0.0
-        for f_key in features:
-            q_value = q_value + (features[f_key] * self.weights[f_key])
 
-        # print(features)
-        # print("Q - VALUE:::::%s"%q_value)
-        return q_value
+    def update(self, state, action, next_state, reward, update = False):
+        pass
+
 
 
     def compute_value_from_qValues(self, state):
@@ -47,6 +37,7 @@ class RLAgent:
         :param state:
         :return:
         """
+
         # No actions available
         if len(self._get_legal_actions(state)) == 0:
             return 0.0
@@ -56,6 +47,7 @@ class RLAgent:
             q_values_for_this_state.append(self.get_qValue(state, action))
 
         return max(q_values_for_this_state)
+
 
 
     def compute_action_from_qValues(self, state, actions = None):
@@ -81,6 +73,7 @@ class RLAgent:
         return max(action_value_pair, key=lambda x: x[1])[0]
 
 
+
     def get_action(self, state, actions = None):
         """
         Compute the action to take in the current state.
@@ -103,58 +96,10 @@ class RLAgent:
         return action
 
 
-    def update(self, state, action, next_state, reward):
-        """
-        Update weights based on transition
-
-        :param state:
-        :param action:
-        :param nextState:
-        :param reward:
-        :return:
-        """
-        # TODO
-        features = self.feat_extractor.get_features(state, action)
-        # difference = reward + (self.discount * self.compute_value_from_qValues(next_state)) - self.get_qValue(state, action)
-        q_value_next_state = (self.discount * self.compute_value_from_qValues(next_state))
-        q_value_curr_state = self.get_qValue(state, action)
-        difference = reward + q_value_next_state - q_value_curr_state
-
-        # print("DISCOUNTED Q VALUE NEXT STATE:%s"%q_value_next_state)
-        # print("Q VALUE CURR STATE:%s" % q_value_curr_state)
-        print("CORRECTION-------------:%s"%difference)
-        self.write_to_file(data = difference, path_to_file = 'assets/'+state.name+'error.csv')
-
-        for f_key in features:
-            self.weights[f_key] = self.weights[f_key] + (self.alpha * difference * features[f_key])
-
-        # Write weights into a file to observe learning
-        # print("WEIGHTS---------------:")
-        # print(self.weights)
-
 
     def get_policy(self, state, actions):
         return self.compute_action_from_qValues(state, actions)
 
-
-    def get_weights(self):
-        return self.weights
-
-
-    def _get_legal_actions(self, agent_state, actions=None):
-        """
-        Computes the set of actions a agent should take from the set of possible actions
-        :param agent_state:
-        :param actions:
-        :return: legal actions the agent can take
-        """
-        possible_actions = agent_state.get_possible_actions(actions)
-
-        # TODO some filtering of actions
-
-        legal_actions = copy.deepcopy(possible_actions)
-
-        return legal_actions
 
 
     def do_action(self, state, action, ns, agent, agent_name, allies):
@@ -256,7 +201,7 @@ class RLAgent:
 
 
     def write_to_file(self, data, path_to_file = 'assets/error.csv'):
-        import os
+
         if os.path.isfile(path_to_file):
             with open(path_to_file, mode='a') as f:
                 f.write(str(data)+str("\n"))
@@ -269,3 +214,17 @@ class RLAgent:
 
 
 
+    def _get_legal_actions(self, agent_state, actions=None):
+        """
+        Computes the set of actions a agent should take from the set of possible actions
+        :param agent_state:
+        :param actions:
+        :return: legal actions the agent can take
+        """
+        possible_actions = agent_state.get_possible_actions(actions)
+
+        # TODO some filtering of actions
+
+        legal_actions = copy.deepcopy(possible_actions)
+
+        return legal_actions

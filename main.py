@@ -14,7 +14,8 @@ import multiprocessing
 from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
-from marlagent.rlagent import RLAgent
+from marlagent.agent.linear.lin_agent import LinearQAgent
+from marlagent.agent.dqn.dqn import DQNAgent
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import NSProxy
@@ -36,8 +37,8 @@ def energy_request_handler(agent, message):
     lock_count = 0
     while not multiprocessing_lock.acquire(blocking=False):
         try:
-            if lock_count <= 3:
-                time.sleep(randint(1, 10) / 10)
+            if lock_count <= 2:
+                time.sleep(randint(1, 3) / 10)
                 lock_count += 1
             else:
                 yield {'topic': 'ENERGY_REQUEST_DECLINE'}
@@ -97,19 +98,19 @@ def energy_request_handler(agent, message):
                                                                        energy_grant))
 
     # Get grid status from CG
-    curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-    net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+    # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+    # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
     # calculate reward
-    delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
+    # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
 
-    agent.log_info('Updating agent with delta reward %s.' % delta_reward)
+    # agent.log_info('Updating agent with delta reward %s.' % delta_reward)
     # update agent with reward
 
-    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+    l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0, eoi = False)
 
     # Update grid status
-    next_state.environment_state.net_grid_status = net_curr_grid_status
+    # next_state.environment_state.net_grid_status = net_curr_grid_status
 
     # update the global state
     l_g_agent_state.energy_consumption = 0.0
@@ -119,7 +120,7 @@ def energy_request_handler(agent, message):
 
     agent.log_info('Completed update operation. Resting!')
 
-    agent.log_info(next_state)
+    # agent.log_info(next_state)
     agent.log_info(l_g_agent_state.environment_state)
 
     print("-----------------------End of Transaction-----------------------\n\n\n")
@@ -146,7 +147,7 @@ def energy_consumption_handler(agent, message):
     if message['topic'] == 'ENERGY_CONSUMPTION':
         _thread.start_new_thread(invoke_agent_ec_handle, (agent, osbrain_ns, message))
 
-    elif message['topic'] == 'END_OF_ITERATION':
+    elif message['topic'] == 'END_OF_ITERATION' or message['topic'] == 'TRAINING_COMPLETE':
         _thread.start_new_thread(eoi_handle, (agent, message))
 
 
@@ -197,23 +198,22 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
                                                                         next_state.environment_state.get_energy_borrowed_from_CG()
                                                                         - l_curr_state.environment_state.get_energy_borrowed_from_CG()))
 
-        agent.log_info('Calculating reward.')
 
+        delta_reward = 0.0
         # Get grid status from CG
-        curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
+        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
         # calculate reward
-        # TODO: If energy borrowed from CG is more than next then it is going in a worser state. reward negatively.
-        delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
+        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action,
+        #                                                                 net_curr_grid_status)
 
-        # update agent with reward
-        if (action['action'] != 'consume_and_store'):
-            agent.log_info('Updating agent with reward %s.' % delta_reward)
-            l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=delta_reward)
+
+        agent.log_info('Updating agent with reward %s.' % delta_reward)
+        l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0)
 
         # Update grid status
-        next_state.environment_state.net_grid_status = net_curr_grid_status
+        # next_state.environment_state.net_grid_status = net_curr_grid_status
 
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
@@ -221,8 +221,8 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
         l_g_agent_state.battery_curr = next_state.battery_curr
         l_g_agent_state.environment_state = next_state.environment_state
 
-        agent.log_info(next_state)
-        agent.log_info(l_g_agent_state.environment_state)
+        # agent.log_info(next_state)
+        # agent.log_info(l_g_agent_state.environment_state)
         agent.log_info('Completed update operation. Resting!')
         print("-----------------------End of Transaction-----------------------\n\n")
 
@@ -249,35 +249,70 @@ def eoi_handle(agent, message):
     global g_env_state
     try:
         print("\n\n\-----------------------Iteration (%s) Completed-----------------------\n\n"%message['iter'])
-        agent.log_info("Publishing Stats...")
+
+        # Fetching Reference
+        l_rl_agent = multiprocessing_ns.rl_agent
         l_g_agent_state = multiprocessing_ns.g_agent_state
         g_env_state = l_g_agent_state.environment_state
+
+
+        agent.log_info("Publishing Stats...")
         agent.log_info(g_env_state)
 
         nzeb_status = (g_env_state.get_total_generated() + g_env_state.get_energy_borrowed_from_ally()) \
                       - (g_env_state.get_total_consumed() + g_env_state.get_energy_borrowed_from_CG())
         agent.log_info("NZEB Status: %s" % nzeb_status)
 
+
         # Log EOI details to CG
         cg_http_service.log_iteration_status(message['iter'], g_env_state, nzeb_status)
 
-        # agent.log_info('Updating agent with reward %s.' % delta_reward)
-        #
-        # g_agent_state_copy = copy.deepcopy(g_agent_state)
-        # g_agent_state_copy.time = datetime.strptime(message['time'], '%Y/%m/%d %H:%M')
-        #
-        # action = {'action': 'consume_and_store'}
-        # rl_agent.update(state=g_agent_state_copy, action=action, next_state=g_agent_state_copy,
-        #                 reward=delta_reward)
+
+        # --------------------- Updating reward ---------------------
+        agent.log_info('Calculating reward.')
+
+        # Get grid status from CG
+        curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
+        net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
+
+        # calculate reward
+        # delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
+
+
+        # If this grid status is better than the previous best grid status
+        # if util.compare(net_curr_grid_status, multiprocessing_ns.best_grid_status) > 1 :
+        #     multiprocessing_ns.best_grid_status = net_curr_grid_status
+        #     delta_reward += 3
+
+        # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
+
+        # multiprocessing_ns.old_grid_status = net_curr_grid_status
+
+        delta_reward = util.reward_transaction(state = None, next_state = None, action = None, net_curr_grid_status = net_curr_grid_status)
+        l_rl_agent.update(state=None, action=None, next_state=None, reward=delta_reward, eoi = True)
+        #---------------------------------------------------------------
+
+
+        if int(message['iter']) > 0 and int(message['iter']) % 50 == 0:
+            l_rl_agent.epsilon = round(l_rl_agent.epsilon * 0.8, 5)
+            agent.log_info("Updated Epsilon: %s"%l_rl_agent.epsilon)
+
+
+        # If training phase done then set exploration to 0
+        # i.e. complete exploitation
+        if message['topic'] == 'TRAINING_COMPLETE':
+            l_rl_agent.epsilon = 0.0
+
 
         # reset the agent global state
+        print(".......................RESETTING GLOBAL STATE.......................")
         l_g_agent_state.reset(float(args.battInit))
         l_g_agent_state.iter = int(message['iter']) + 1
-        print(".......................RESETTING GLOBAL STATE.......................")
-
         agent.log_info(l_g_agent_state.environment_state)
 
+
         # Synchronize Objects
+        multiprocessing_ns.rl_agent = l_rl_agent
         multiprocessing_ns.g_agent_state = l_g_agent_state
         agent.log_info("Finished synchronizing objects across forked processes.")
 
@@ -293,29 +328,11 @@ def predict_energy_generation(time):
     return 0.0
 
 
-def initiate_nameserver(ns_socket_addr):
-    pid = str(os.getpid())
+def get_ref_to_nameserver(ns_socket_addr):
     osbrain_ns = None
-    is_name_server_host = False
-
-    # If file exists then nameserver has already been started. Return a reference to the name server
-    # if os.path.isfile(pidfile):
-    print("Name server exists. Fetching reference to existing nameserver...")
+    print("Fetching reference to existing nameserver...")
     osbrain_ns = NSProxy(nsaddr=ns_socket_addr)
-    # else:
-    #     try :
-    #         print("Creating a new nameserver...")
-    #         osbrain_ns = run_nameserver(addr=ns_socket_addr)
-    #         open(pidfile, 'w+').write(pid)
-    #         is_name_server_host = True
-    #
-    #     except Exception:
-    #         osbrain_ns.shutdown()
-    #         print(traceback.format_exc())
-    #         print("ERROR: Exception caught when creating nameserver.")
-    #         sys.exit(-1)
-
-    return (is_name_server_host, osbrain_ns)
+    return osbrain_ns
 
 
 def start_server_job(osbrain_ns):
@@ -332,7 +349,7 @@ def args_handler():
 
     parser.add_argument('--agentname', required=True, help='Name of the agent')
     parser.add_argument('--nameserver', required=True, help='Socket address of the nameserver')
-    parser.add_argument('--allies', required=True, help='Socket address of the nameserver')
+    parser.add_argument('--allies', required=False, help='Socket address of the nameserver')
     parser.add_argument('--battInit', required=True, help='Initial battery charge.')
     parser.add_argument('--solarexposure', required=False, help='Path to solar exposure dataset')
     parser.add_argument('--nSolarPanel', required=True, help='Number fo solar panel this house has')
@@ -353,7 +370,7 @@ if __name__ == '__main__':
 
     # Initiate name server
     global osbrain_ns
-    is_name_server_host, osbrain_ns = initiate_nameserver(args.nameserver)
+    osbrain_ns = get_ref_to_nameserver(args.nameserver)
 
     global cg_http_service
     cg_http_service = httpservice.CGHTTPHandler(args.agentname)
@@ -368,7 +385,8 @@ if __name__ == '__main__':
         multiprocessing_ns = manager.Namespace()
         multiprocessing_lock = manager.RLock()
 
-        multiprocessing_ns.rl_agent = RLAgent()
+        multiprocessing_ns.rl_agent = DQNAgent()
+        # multiprocessing_ns.rl_agent = LinearQAgent()
 
         global energy_generator
         energy_generator = EnergyGeneration(args.solarexposure, float(args.nSolarPanel))
@@ -380,25 +398,28 @@ if __name__ == '__main__':
                                    battery_curr = float(args.battInit), time = '2014/01/01 12:00', environment_state = environment_state,
                                    cg_http_service = cg_http_service)
 
+        multiprocessing_ns.old_grid_status = -99999
+        multiprocessing_ns.best_grid_status = -99999
+
         global allies
         allies = [ally for ally in args.allies.split(",") ]
+        # allies = []
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = osbrain_ns.addr(), serializer='json', transport='tcp')
         agent.bind('REP', alias=str('energy_request_'+args.agentname), handler=energy_request_handler)
         agent.bind('REP', alias='consumption', handler=energy_consumption_handler)
 
-        if is_name_server_host:
-            start_server_job(osbrain_ns)
+
+
+    except Exception:
+        print(traceback.format_exc())
+
 
     finally:
-        if is_name_server_host:
-            os.unlink(pidfile)
-        #     osbrain_ns.shutdown()
 
-        if not is_name_server_host:
-            while(1):
-                time.sleep(1)
+        while(1):
+            time.sleep(1)
 
         print("Bye!")
 

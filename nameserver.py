@@ -39,23 +39,33 @@ class NameServer:
             'generation': 0.0
         }
 
-        for iter in range(50):
+        max_iter = 500
+
+        for iter in range(max_iter):
             message['iter'] = iter
 
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
-            eoi_message = {
-                'topic': 'END_OF_ITERATION',
-                'iter': iter,
-                'time': last_message['time']
-            }
+            if iter <= (max_iter-11):
+                eoi_message = {
+                    'topic': 'END_OF_ITERATION',
+                    'iter': iter,
+                    'time': last_message['time']
+                }
+            else:
+                # last iteration will warn the agents to exploit their policies completely
+                eoi_message = {
+                    'topic': 'TRAINING_COMPLETE',
+                    'iter': iter,
+                    'time': last_message['time']
+                }
 
+            time.sleep(2)
             # EOI: notify each agent to save its status at the end of each iteration
             for name in agent_name_arr:
                 self._send_message(server_agent, agent_addr[name], alias='consumption', message=eoi_message)
-            time.sleep(3)
-
+            time.sleep(4)
 
         # Exit Message after iterations done
         # Safe shutdown of all agents for testing
@@ -78,8 +88,8 @@ class NameServer:
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
 
         try:
-            # for timestep in range(0, 150, 30):
-            for timestep in range(0, 4290, 30):
+            # for timestep in range(0, 1200, 30):
+            for timestep in range(7200, 11490, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
@@ -93,7 +103,7 @@ class NameServer:
 
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
-                time.sleep(2)
+                time.sleep(1.5)
 
         except Exception:
             print(traceback.format_exc())

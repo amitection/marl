@@ -18,7 +18,7 @@ class CGHTTPHandler:
         }
 
         response = requests.post(url=url, json=data)
-        self.agent_id = json.loads(response.content)['id']
+        self.agent_id = json.loads(response.content.decode('utf-8'))['id']
 
 
     def update_energy_status(self, time, iter, batt_init, energy_consumption, energy_generation, borrowed_from_CG):
@@ -40,7 +40,7 @@ class CGHTTPHandler:
         if response.status_code == 200:
             print("Energy status updated successfully with central grid.")
         else:
-            print("ERROR: %s"%response.content)
+            print("ERROR: %s"%response.content.decode('utf-8'))
 
 
     def register_transaction(self, time, buyer_name, amount):
@@ -60,7 +60,7 @@ class CGHTTPHandler:
         if response.status_code == 200:
             print("Energy transaction successfully registered with central grid.")
         else:
-            print("ERROR: %s"%response.content)
+            print("ERROR: %s"%response.content.decode('utf-8'))
 
 
     def get_energy_status(self, iter):
@@ -69,7 +69,7 @@ class CGHTTPHandler:
 
         if response.status_code == 200:
             print("Grid energy status retrieved successfully.")
-            return json.loads(response.content)
+            return json.loads(response.content.decode('utf-8'))
         else:
             print("ERROR: Error retrieving grid energy status. %s"%response.content)
             return None
@@ -93,7 +93,7 @@ class CGHTTPHandler:
         if response.status_code == 200:
             print("Iteration status successfully logged to central grid.")
         else:
-            print("ERROR: %s" % response.content)
+            print("ERROR: %s" % response.content.decode('utf-8'))
 
 
 instance = False
