@@ -293,15 +293,15 @@ def eoi_handle(agent, message):
         #---------------------------------------------------------------
 
 
-        if int(message['iter']) > 0 and int(message['iter']) % 50 == 0:
-            l_rl_agent.epsilon = round(l_rl_agent.epsilon * 0.8, 5)
-            agent.log_info("Updated Epsilon: %s"%l_rl_agent.epsilon)
+        # if int(message['iter']) > 0 and int(message['iter']) % 50 == 0:
+        #     l_rl_agent.epsilon = round(l_rl_agent.epsilon * 0.8, 5)
+        #     agent.log_info("Updated Epsilon: %s"%l_rl_agent.epsilon)
 
 
         # If training phase done then set exploration to 0
         # i.e. complete exploitation
-        if message['topic'] == 'TRAINING_COMPLETE':
-            l_rl_agent.epsilon = 0.0
+        # if message['topic'] == 'TRAINING_COMPLETE':
+        #     l_rl_agent.epsilon = 0.0
 
 
         # reset the agent global state
