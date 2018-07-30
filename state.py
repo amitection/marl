@@ -15,7 +15,7 @@ class AgentState:
         self.iter = iter
         self.energy_consumption = energy_consumption
         self.energy_generation = energy_generation
-        self.battery_max = 7.2 # 1.44 * 5
+        self.battery_max = 7.2
         self.battery_curr = battery_curr
         self.time = time
 
