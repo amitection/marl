@@ -85,8 +85,8 @@ class DQNAgent(rlagent.RLAgent):
 
             # Perform the update in a batch. Apply the average error over all fields
 
-            if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
-                self.perform_update(state.name, reward = 0)
+            # if self.num_calls > self.learning_starts and self.num_calls % self.learning_freq == 0:
+            #     self.perform_update(state.name, reward = 0)
 
 
     def perform_update(self, agent_name, reward):
