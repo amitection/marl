@@ -17,11 +17,13 @@ class NameServer:
     def schedule_job(self, server_agent):
         self.d1 = self._load_data("assets/house1_consumption.csv")
         self.d2 = self._load_data("assets/house2_consumption.csv")
+        self.d2 = self._load_data("assets/house3_consumption.csv")
 
         d_map = {
             "Alice": self.d1,
             "Bob": self.d2,
-            "Charlie": self.d1
+            "Charlie": self.d1,
+            "Dave": self.d3,
         }
 
         # extracting the list of agents
