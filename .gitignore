@@ -2,6 +2,7 @@
 __pycache__
 p1.log
 p2.log
+p4.log
 feat_extractor.pyc
 marlagent/*.pyc
 *.pyc
