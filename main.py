@@ -80,16 +80,18 @@ def energy_request_handler(agent, message):
 
         agent.log_info('Performing action (%s).' % action)
 
+        response = None
+
         # If energy request is declined
         if action['action'] ==  'deny_request':
-            yield {'topic':'ENERGY_REQUEST_DECLINE'}
+            response = {'topic':'ENERGY_REQUEST_DECLINE'}
 
         # perform action and update global agent state
         next_state, energy_grant = l_rl_agent.do_action(l_curr_state, action, osbrain_ns, agent, args.agentname, allies)
 
         # if energy request is accepted
         if action['action'] == 'grant':
-            yield {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
+            response = {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
             agent.log_info("GRANTING:-----:%s"%energy_grant)
             next_state.environment_state.update_energy_granted_to_ally(energy_grant)
             print("BATTERY AFTER GRANTING-----:%s"%next_state.battery_curr)
@@ -131,8 +133,10 @@ def energy_request_handler(agent, message):
         multiprocessing_ns.rl_agent = l_rl_agent
         agent.log_info("Finished synchronizing objects across forked processes.")
 
+        yield response
     except Exception:
         print(traceback.format_exc())
+        yield {'topic': 'ENERGY_REQUEST_DECLINE'}
 
     finally:
         # Release the lock
