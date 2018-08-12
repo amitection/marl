@@ -24,6 +24,7 @@ class NameServer:
             "Bob": self.d2,
             "Charlie": self.d1,
             "Dave": self.d3,
+            "Ellie": self.d3,
         }
 
         # extracting the list of agents
@@ -92,7 +93,7 @@ class NameServer:
 
         try:
             # for timestep in range(0, 1200, 30):
-            for timestep in range(7200, 11490, 30):
+            for timestep in range(218880, 223170, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
