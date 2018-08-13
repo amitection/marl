@@ -35,7 +35,7 @@ class EnergyGeneration:
 
         unit_generation = self._calculate_generation(exposure=float(data['DNI'].values[0]))
         total_generation = (unit_generation * self.n_solar_panel) / 1000.0
-        print("TOTAL GENERATION"+str(total_generation))
+        print("TOTAL GENERATION: "+str(total_generation))
         return total_generation
 
 

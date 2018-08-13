@@ -42,6 +42,7 @@ def energy_request_handler(agent, message):
                 lock_count += 1
             else:
                 yield {'topic': 'ENERGY_REQUEST_DECLINE'}
+                agent.log_info("Could not acquire lock! Energy request declined.")
                 return
         except:
             print(traceback.format_exc())
