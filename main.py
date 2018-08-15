@@ -131,8 +131,11 @@ def energy_request_handler(agent, message):
 
     finally:
         # Release the lock
-        multiprocessing_lock.release()
-        agent.log_info("Lock Released!")
+        try :
+            multiprocessing_lock.release()
+            agent.log_info("Lock Released!")
+        except Exception:
+            print(traceback.format_exc())
 
 
 def energy_consumption_handler(agent, message):
