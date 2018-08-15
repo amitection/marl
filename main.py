@@ -42,13 +42,15 @@ def energy_request_handler(agent, message):
                 lock_count += 1
             else:
                 yield {'topic': 'ENERGY_REQUEST_DECLINE'}
+                agent.log_info("Could not acquire lock! Energy request declined.")
                 return
         except:
             print(traceback.format_exc())
 
 
     agent.log_info("Lock Acquired!")
-    try :
+
+    try:
         print("-----------------------Start Transaction-----------------------")
         agent.log_info('Received: %s' % message)
 
@@ -79,39 +81,30 @@ def energy_request_handler(agent, message):
 
         agent.log_info('Performing action (%s).' % action)
 
+        response = None
+
         # If energy request is declined
         if action['action'] ==  'deny_request':
-            yield {'topic':'ENERGY_REQUEST_DECLINE'}
+            response = {'topic':'ENERGY_REQUEST_DECLINE'}
 
         # perform action and update global agent state
         next_state, energy_grant = l_rl_agent.do_action(l_curr_state, action, osbrain_ns, agent, args.agentname, allies)
 
         # if energy request is accepted
         if action['action'] == 'grant':
-            yield {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
+            response = {'topic': 'ENERGY_REQUEST_ACCEPTED', 'energy': energy_grant}
             agent.log_info("GRANTING:-----:%s"%energy_grant)
             next_state.environment_state.update_energy_granted_to_ally(energy_grant)
             print("BATTERY AFTER GRANTING-----:%s"%next_state.battery_curr)
 
-            _thread.start_new_thread(cg_http_service.register_transaction, (message['time'],
-                                                                           message['agentName'],
-                                                                           energy_grant))
+            _thread.start_new_thread(cg_http_service.register_transaction, (l_g_agent_state.iter,
+                                                                            message['time'], message['agentName'],
+                                                                            energy_grant))
 
-        # Get grid status from CG
-        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
-
-        # calculate reward
-        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
-
-        # agent.log_info('Updating agent with delta reward %s.' % delta_reward)
-        # update agent with reward
 
         l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0, eoi = False)
 
-        # Update grid status
-        # next_state.environment_state.net_grid_status = net_curr_grid_status
-
+   
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
         l_g_agent_state.energy_generation = 0.0
@@ -127,12 +120,14 @@ def energy_request_handler(agent, message):
 
         # Synchronize Objects
         multiprocessing_ns.g_agent_state = l_g_agent_state
-        print("LR AGENT:-----------",l_rl_agent)
         multiprocessing_ns.rl_agent = l_rl_agent
         agent.log_info("Finished synchronizing objects across forked processes.")
 
+        yield response
     except Exception:
         print(traceback.format_exc())
+        yield {'topic': 'ENERGY_REQUEST_DECLINE'}
+
 
     finally:
         # Release the lock
