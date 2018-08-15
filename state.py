@@ -36,7 +36,7 @@ class AgentState:
                 possible_actions.append({'action':'consume_and_store', 'data':None})
             else:
                 possible_actions.append({'action':'request_ally', 'data':None})
-                # possible_actions.append({'action':'request_grid', 'data':None})
+                possible_actions.append({'action':'request_grid', 'data':None})
 
         else:
             # Case when only options are grant or deny
@@ -46,9 +46,7 @@ class AgentState:
                     if action['action'] == 'deny_request':
                         possible_actions.append(action)
             else:
-                for action in actions:
-                    if action['action'] == 'grant':
-                        possible_actions.append(action)
+                possible_actions = actions
 
         return possible_actions
 
