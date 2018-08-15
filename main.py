@@ -101,21 +101,10 @@ def energy_request_handler(agent, message):
                                                                             message['time'], message['agentName'],
                                                                             energy_grant))
 
-        # Get grid status from CG
-        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
-
-        # calculate reward
-        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
-
-        # agent.log_info('Updating agent with delta reward %s.' % delta_reward)
-        # update agent with reward
 
         l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0, eoi = False)
 
-        # Update grid status
-        # next_state.environment_state.net_grid_status = net_curr_grid_status
-
+   
         # update the global state
         l_g_agent_state.energy_consumption = 0.0
         l_g_agent_state.energy_generation = 0.0
@@ -138,6 +127,7 @@ def energy_request_handler(agent, message):
     except Exception:
         print(traceback.format_exc())
         yield {'topic': 'ENERGY_REQUEST_DECLINE'}
+
 
     finally:
         # Release the lock
