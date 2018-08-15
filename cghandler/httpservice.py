@@ -43,11 +43,12 @@ class CGHTTPHandler:
             print("ERROR: %s"%response.content.decode('utf-8'))
 
 
-    def register_transaction(self, time, buyer_name, amount):
+    def register_transaction(self, iter, time, buyer_name, amount):
 
         url = 'http://localhost:8080/energy/trasaction'
 
         data = {
+            "iter": iter,
             "timestamp": time,
             "sellerId": self.agent_id,
             "buyerName": buyer_name,
