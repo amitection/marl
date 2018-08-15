@@ -97,9 +97,9 @@ def energy_request_handler(agent, message):
             next_state.environment_state.update_energy_granted_to_ally(energy_grant)
             print("BATTERY AFTER GRANTING-----:%s"%next_state.battery_curr)
 
-            _thread.start_new_thread(cg_http_service.register_transaction, (message['time'],
-                                                                           message['agentName'],
-                                                                           energy_grant))
+            _thread.start_new_thread(cg_http_service.register_transaction, (l_g_agent_state.iter,
+                                                                            message['time'], message['agentName'],
+                                                                            energy_grant))
 
         # Get grid status from CG
         # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
