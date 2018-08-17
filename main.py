@@ -412,7 +412,9 @@ if __name__ == '__main__':
         multiprocessing_ns.best_grid_status = -99999
 
         global allies
-        allies = [ally for ally in args.allies.split(",") ]
+        allies = ["A"+str(i) for i in range(1,51)] # A1.... A50
+        allies.remove(args.agentname)
+        #allies = [ally for ally in args.allies.split(",") ]
         # allies = []
 
         # Initialize the agent
