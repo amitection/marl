@@ -105,6 +105,7 @@ class NameServer:
                     message['generation'] = float(
                         util.get_generation(d_consumption['Time'].get(timestep), message['consumption']))
 
+                    print("Sending message to Agent: ",name)
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
                 time.sleep(3)
