@@ -3,6 +3,8 @@ import json
 
 class CGHTTPHandler:
 
+    base_url = 'http://localhost:8080'
+
     def __init__(self, agent_name):
         self.agent_name = agent_name
         self._register_agent()
@@ -11,7 +13,8 @@ class CGHTTPHandler:
     def _register_agent(self):
         print("Registering Agent with Central Monitor...")
 
-        url = 'http://localhost:8080/agent/register'
+        url = self.base_url+'/agent/register'
+
         data = {
             "name": self.agent_name,
             "active": True
@@ -23,7 +26,7 @@ class CGHTTPHandler:
 
     def update_energy_status(self, time, iter, batt_init, energy_consumption, energy_generation, borrowed_from_CG):
 
-        url = 'http://localhost:8080/energy/status'
+        url = self.base_url + '/energy/status'
 
         data = {
             "timestamp": time,
@@ -45,7 +48,7 @@ class CGHTTPHandler:
 
     def register_transaction(self, time, buyer_name, amount):
 
-        url = 'http://localhost:8080/energy/trasaction'
+        url = self.base_url + '/energy/trasaction'
 
         data = {
             "timestamp": time,
@@ -64,7 +67,8 @@ class CGHTTPHandler:
 
 
     def get_energy_status(self, iter):
-        url = 'http://localhost:8080/energy/status/grid/'+str(iter)
+        url = self.base_url + '/energy/status/grid/'+str(iter)
+
         response = requests.get(url=url)
 
         if response.status_code == 200:
@@ -76,7 +80,7 @@ class CGHTTPHandler:
 
 
     def log_iteration_status(self, iter, env, nzeb_status):
-        url = 'http://localhost:8080/energy/log/iteration/status'
+        url = self.base_url + '/energy/log/iteration/status'
 
         data = {
             "iteration": iter,
