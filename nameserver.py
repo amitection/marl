@@ -48,6 +48,7 @@ class NameServer:
         for iter in range(max_iter):
             message['iter'] = iter
 
+            server_agent("List of Agents,......... ",agent_name_arr)
             last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
             server_agent.log_info("Iteration (%s) complete!"%iter)
 
@@ -105,7 +106,7 @@ class NameServer:
                     message['generation'] = float(
                         util.get_generation(d_consumption['Time'].get(timestep), message['consumption']))
 
-                    print("Sending message to Agent: ",name)
+                    server_agent.log_info("Sending message to Agent: ",name)
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
                 time.sleep(3)
