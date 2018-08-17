@@ -19,12 +19,14 @@ class NameServer:
         self.d2 = self._load_data("assets/house2_consumption.csv")
         self.d3 = self._load_data("assets/house3_consumption.csv")
 
-        d_map = {
-            "Alice": self.d1,
-            "Bob": self.d2,
-            "Charlie": self.d1,
-            "Dave": self.d3,
-        }
+        d_map ={}
+        for i in range(1, 46, 3):
+            d_map['A' + str(i)] = self.d1
+            d_map['A' + str(i+1)] = self.d2
+            d_map['A' + str(i+2)] = self.d3
+
+        d_map['A49'] = self.d2
+        d_map['A50'] = self.d3
 
         # extracting the list of agents
         agents = self.ns.agents()
@@ -63,11 +65,11 @@ class NameServer:
                     'time': last_message['time']
                 }
 
-            time.sleep(2)
+            time.sleep(5)
             # EOI: notify each agent to save its status at the end of each iteration
             for name in agent_name_arr:
                 self._send_message(server_agent, agent_addr[name], alias='consumption', message=eoi_message)
-            time.sleep(4)
+            time.sleep(5)
 
         # Exit Message after iterations done
         # Safe shutdown of all agents for testing
@@ -91,7 +93,6 @@ class NameServer:
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
 
         try:
-            # for timestep in range(0, 1200, 30):
             for timestep in range(7200, 11490, 30):
 
                 for name in agent_name_arr:
@@ -106,7 +107,7 @@ class NameServer:
 
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
-                time.sleep(1.5)
+                time.sleep(3)
 
         except Exception:
             print(traceback.format_exc())
