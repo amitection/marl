@@ -58,11 +58,10 @@ class NameServer:
 
         try:
             server_agent.log_info("Starting distribution of data...")
-            
+
             for iter in range(max_iter):
                 message['iter'] = iter
 
-                server_agent.log_info("List of Agents,......... ",agent_name_arr)
                 last_message = self.dispatch_energy_data(server_agent, message, agent_name_arr, agent_addr, d_map)
                 server_agent.log_info("Iteration (%s) complete!"%iter)
 
