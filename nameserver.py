@@ -125,7 +125,7 @@ class NameServer:
                     server_agent.log_info("Sending message to Agent: ",name)
                     self._send_message(server_agent, agent_addr[name], alias='consumption', message=message)
 
-                time.sleep(3)
+                time.sleep(2)
 
         except Exception:
             print(traceback.format_exc())
