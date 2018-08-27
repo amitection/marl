@@ -33,6 +33,12 @@ def initiate_nameserver(ns_socket_addr):
 
 
 def start_server_job(osbrain_ns, agentname):
+    '''
+    Starts the Synchronizer job to distribute energy data.
+    :param osbrain_ns:
+    :param agentname:
+    :return:
+    '''
     time.sleep(3)
     ns_agent = NameServer(osbrain_ns, agentname)
 

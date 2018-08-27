@@ -22,9 +22,6 @@ class FeatureExtractor:
         for i in range (0, (365 * 48)):
             train_x[i][1] = i%7
 
-        # for i in range (0, (365 * 48)):
-        #     train_x[i][2] = i%12
-
         self.ohe_time = OneHotEncoder(sparse=False)
         self.ohe_time.fit(train_x)
 
@@ -56,9 +53,6 @@ class FeatureExtractor:
         action_trans = self.ohe_actions.transform(self.lb_actions.transform([action['action']]).reshape(1,-1))
         for f in action_trans[0]:
             features.append(f)
-        # ------------------------------------------------
-
-        #return self.__encode_features_to_Counter(features)
 
         return features
 

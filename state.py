@@ -52,6 +52,10 @@ class AgentState:
 
 
     def get_score(self):
+        '''
+        Computes the score based on the state of the environment.
+        :return: score
+        '''
         score = 0.0
         # if it is in the positive state
         # if (self.energy_generation + self.battery_curr) >= self.energy_consumption:
@@ -85,6 +89,11 @@ class AgentState:
 
 
     def reset(self, battery_init):
+        '''
+        Resets the entire state of the agent. Generally used at the end of an Episode
+        :param battery_init:
+        :return:
+        '''
         self.energy_consumption = 0.0
         self.energy_generation = 0.0
         self.battery_curr = battery_init

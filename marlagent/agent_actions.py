@@ -76,6 +76,14 @@ def get_energy_balance(state):
 
 
 def send_message(agent, server_addr, alias,  message):
+    '''
+    Send a message to a remote agent.
+    :param agent:
+    :param server_addr:
+    :param alias:
+    :param message:
+    :return:
+    '''
     agent.connect(server=server_addr, alias=alias)
     agent.send(alias, message=message)
     reply = agent.recv(alias)

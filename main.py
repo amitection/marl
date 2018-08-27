@@ -3,7 +3,6 @@ The main program that triggers the application
 '''
 
 import argparse
-import os
 import sys
 import traceback
 import time
@@ -14,10 +13,8 @@ import multiprocessing
 from random import randint
 from state import AgentState, EnvironmentState
 from datetime import datetime
-from marlagent.agent.linear.lin_agent import LinearQAgent
 from marlagent.agent.dqn.dqn import DQNAgent
 from osbrain import run_agent
-from osbrain import run_nameserver
 from osbrain import NSProxy
 from nameserver import NameServer
 from cghandler import httpservice
@@ -101,15 +98,6 @@ def energy_request_handler(agent, message):
                                                                            message['agentName'],
                                                                            energy_grant))
 
-        # Get grid status from CG
-        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
-
-        # calculate reward
-        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action, net_curr_grid_status)
-
-        # agent.log_info('Updating agent with delta reward %s.' % delta_reward)
-        # update agent with reward
 
         l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0, eoi = False)
 
@@ -210,14 +198,6 @@ def invoke_agent_ec_handle(agent, osbrain_ns, message):
 
 
         delta_reward = 0.0
-        # Get grid status from CG
-        # curr_grid_status = cg_http_service.get_energy_status(l_curr_state.iter)
-        # net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
-
-        # calculate reward
-        # delta_reward = next_state.get_score() + util.reward_transaction(l_curr_state, next_state, action,
-        #                                                                 net_curr_grid_status)
-
 
         agent.log_info('Updating agent with reward %s.' % delta_reward)
         l_rl_agent.update(state=l_curr_state, action=action, next_state=next_state, reward=0.0)
@@ -285,24 +265,13 @@ def eoi_handle(agent, message):
         curr_grid_status = cg_http_service.get_energy_status(int(message['iter']))
         net_curr_grid_status = util.calc_net_grid_status(curr_grid_status)
 
-        # calculate reward
-        # delta_reward = util.compare(net_curr_grid_status, multiprocessing_ns.old_grid_status)
-
-
-        # If this grid status is better than the previous best grid status
-        # if util.compare(net_curr_grid_status, multiprocessing_ns.best_grid_status) > 1 :
-        #     multiprocessing_ns.best_grid_status = net_curr_grid_status
-        #     delta_reward += 3
-
-        # delta_reward = delta_reward - abs(int(multiprocessing_ns.best_grid_status - net_curr_grid_status)) * 0.1
-
-        # multiprocessing_ns.old_grid_status = net_curr_grid_status
 
         delta_reward = util.reward_transaction(state = None, next_state = None, action = None, net_curr_grid_status = net_curr_grid_status)
         l_rl_agent.update(state=None, action=None, next_state=None, reward=delta_reward, eoi = True)
         #---------------------------------------------------------------
 
 
+        # Change the Epsilon value every 50 iterations to reduce exploration
         if int(message['iter']) > 0 and int(message['iter']) % 50 == 0:
             l_rl_agent.epsilon = round(l_rl_agent.epsilon * 0.8, 5)
             agent.log_info("Updated Epsilon: %s"%l_rl_agent.epsilon)
@@ -332,10 +301,6 @@ def eoi_handle(agent, message):
     finally:
         # Release the lock
         multiprocessing_lock.release()
-
-def predict_energy_generation(time):
-    print("TBD")
-    return 0.0
 
 
 def get_ref_to_nameserver(ns_socket_addr):
@@ -414,8 +379,6 @@ if __name__ == '__main__':
         global allies
         allies = ["A"+str(i) for i in range(1,11)] # A1.... A50
         allies.remove(args.agentname)
-        #allies = [ally for ally in args.allies.split(",") ]
-        # allies = []
 
         # Initialize the agent
         agent = run_agent(name = args.agentname, nsaddr = osbrain_ns.addr(), serializer='json', transport='tcp')

@@ -29,6 +29,11 @@ optimizer_spec = OptimizerSpec(
 
 
 class DQNAgent(rlagent.RLAgent):
+    '''
+    Sourced from - https://github.com/transedward/pytorch-dqn
+
+    Implement Deep Q Learning by extending the base RL class
+    '''
 
     def __init__(self):
 
@@ -57,21 +62,40 @@ class DQNAgent(rlagent.RLAgent):
 
 
     def get_qValue(self, state, action):
+        '''
+        Return the Q-Value after computation using the Q network.
+        :param state:
+        :param action:
+        :return:
+        '''
 
         features = self.feat_extractor.get_features(state, action)
         feat_arr = self.__transform_to_numpy(features)
 
+        # Use volatile = True if variable is only used in inference mode, i.e. don’t save the history
         state_ts = torch.from_numpy(feat_arr).type(dtype).unsqueeze(0)
         q_values_ts = self.Q(Variable(state_ts, volatile=True)).data
 
         print("Calculated Q-Value for action ({0}): {1}".format(action['action'], q_values_ts))
 
-        # Use volatile = True if variable is only used in inference mode, i.e. don’t save the history
         return q_values_ts
 
 
 
     def update(self, state, action, next_state, reward, eoi = False):
+        '''
+        Stores the state action and reward in a Replay Buffer first.
+        If the number of elements in the buffer is greater than the
+        threshold then it will call the actual update method that
+        updates the Q and the target Q network.
+
+        :param state:
+        :param action:
+        :param next_state:
+        :param reward:
+        :param eoi:
+        :return:
+        '''
 
         if eoi == True:
             self.replay_buffer.update_last_transition_with_reward(reward)
@@ -90,14 +114,19 @@ class DQNAgent(rlagent.RLAgent):
 
 
     def perform_update(self, agent_name, reward):
+        '''
+        Performs the update of the Q network and the Target Q network.
 
-        #TODO: Ignore reward from EOI handler
+        :param agent_name:
+        :param reward:
+        :return:
+        '''
 
         print("Updating network...")
+
+        # Sample a batch of experiences from the Replay Buffer.
         obs, next_obs, r, eoi = self.replay_buffer.sample(batch_size=64)
 
-        #reward = reward * np.zeros(obs.shape[0])
-        # r[r.shape[0] - 1] = reward
         reward = r
 
         obs_batch = Variable(torch.from_numpy(obs).type(dtype))
@@ -109,15 +138,8 @@ class DQNAgent(rlagent.RLAgent):
         target_Q_values = self.target_Q(next_obs_batch).detach()
         target_Q_values = target_Q_values * not_eoi
 
-        # print("CURR Q VALUE:", current_Q_values)
-        # print("TARGET Q VALUE:", target_Q_values)
-        # print("REWARD BATCH", reward_batch)
-        print("Not EOI", not_eoi)
-
-
         q_value_curr_state = current_Q_values
         q_value_next_state = reward_batch + (self.discount * target_Q_values)
-        # print("Q VALUE NEXT STATE:", q_value_next_state)
 
         # Compute Bellman error
         bellman_error = q_value_next_state - q_value_curr_state
@@ -143,8 +165,6 @@ class DQNAgent(rlagent.RLAgent):
         # Perfom the update
         self.optimizer.step()
 
-        # Clear stored values in the replay buffer
-        # self.replay_buffer.reset()
         print("Updating network finished.")
 
         self.num_updates += 1

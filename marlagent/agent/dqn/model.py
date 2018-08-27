@@ -5,6 +5,8 @@ class DQN(nn.Module):
 
     def __init__(self, in_channels):
         """
+        Sourced from - https://github.com/transedward/pytorch-dqn
+
         Initialize a deep Q-learning network as described in
         https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
         Arguments:

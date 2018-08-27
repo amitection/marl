@@ -3,6 +3,8 @@ import numpy as np
 
 class ReplayBuffer:
     """
+    Sourced From - https://github.com/transedward/pytorch-dqn
+
     Replay Buffer stores the past obervations along with actions
     performed and the reward obtained after performing
     those actions.
@@ -24,6 +26,13 @@ class ReplayBuffer:
 
 
     def store_transition(self, state, action, reward):
+        '''
+        Stores a state, action and reward in a global buffer.
+        :param state:
+        :param action:
+        :param reward:
+        :return:
+        '''
 
         if self.obs is None:
             self.obs        = np.empty([self.size, self.n_features],        dtype=np.float32)
@@ -54,7 +63,8 @@ class ReplayBuffer:
 
 
     def sample(self, batch_size):
-        """Sample `batch_size` different transitions.
+        """
+        Sample `batch_size` different transitions.
         i-th sample transition is the following:
         when observing `obs_batch[i]`, action `act_batch[i]` was taken,
         after which reward `rew_batch[i]` was received and subsequent
@@ -137,7 +147,8 @@ class ReplayBuffer:
 
 
 def sample_n_unique(sampling_f, n):
-    """Helper function. Given a function `sampling_f` that returns
+    """
+    Helper function. Given a function `sampling_f` that returns
     comparable objects, sample n such unique objects.
     """
     res = []

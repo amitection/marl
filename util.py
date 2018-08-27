@@ -8,6 +8,14 @@ from datetime import datetime
 
 
 def raiseNotDefined():
+    '''
+    Author - UC Berkeley.
+    Sourced from the Pacman Project.
+
+    Raises a not defined error.
+    Can be used as a place holder in a method.
+    :return:
+    '''
     fileName = inspect.stack()[1][1]
     line = inspect.stack()[1][2]
     method = inspect.stack()[1][3]
@@ -22,11 +30,20 @@ def flip_coin( p ):
 
 
 def cnv_datetime_to_str(time, format):
-    # date = datetime.strptime(time, '%Y-%m-%d %H:%M')
     return time.strftime(format)
 
 
 def get_generation(ts, consumption):
+    '''
+    Mock method to generate a energy based on the Consumption.
+    This method is called by the Synchronizer process.
+    However, the value generated is not used by the agents.
+    See energy_generation.py
+
+    :param ts:
+    :param consumption:
+    :return: Mock energy generation value.
+    '''
     generation = 0.0
     if ts.time().hour < 18 and ts.time().hour > 6:
         if flip_coin(0.7):
@@ -37,24 +54,17 @@ def get_generation(ts, consumption):
     return generation
 
 
-def randomize_max(max_value, action_value_pairs):
-    ''
-
-
-def get_reward_for_action(action):
-    action_reward_dict = {
-        'request_ally' : 0,
-        'request_grid': 0,
-        'grant': 0.0,
-        'deny_request': 0,
-        'consume_and_store': 0,
-    }
-
-    return action_reward_dict[action]
-
-
 
 def reward_transaction(state, next_state, action, net_curr_grid_status):
+    '''
+    Rewards a energy transaction based on the community or local energy status.
+    :param state:
+    :param next_state:
+    :param action:
+    :param net_curr_grid_status:
+    :return: reward
+    '''
+
     reward = 0.0
     # if next_state.environment_state.get_energy_borrowed_from_ally() > state.environment_state.get_energy_borrowed_from_ally():
     #     reward += 0.5
@@ -105,6 +115,9 @@ def calc_net_grid_status(curr_grid_status):
 
 class Counter(dict):
     """
+    Author - UC Berkeley.
+    Sourced from the Pacman Project.
+
     A counter keeps track of counts for a set of keys.
 
     The counter class is an extension of the standard python

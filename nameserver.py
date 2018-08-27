@@ -19,14 +19,9 @@ class NameServer:
         self.d2 = self._load_data("assets/house2_consumption.csv")
         self.d3 = self._load_data("assets/house3_consumption.csv")
 
-        # d_map ={}
-        # for i in range(1, 10, 3):
-        #     d_map['A' + str(i)] = self.d1
-        #     d_map['A' + str(i+1)] = self.d2
-        #     d_map['A' + str(i+2)] = self.d3
-        #
-        # d_map['A10'] = self.d1
 
+        # Map agents to dataset
+        # Current configuration for 10 agents
         d_map = {
             "A1": self.d1,
             "A2": self.d2,
@@ -46,6 +41,7 @@ class NameServer:
         server_agent.log_info("Registered clients: %s"%agent_addr)
 
 
+        # The default message
         message = {
             'topic': 'ENERGY_CONSUMPTION',
             'time': datetime.now().strftime('%Y/%m/%d %H:%M'),
@@ -59,6 +55,7 @@ class NameServer:
         try:
             server_agent.log_info("Starting distribution of data...")
 
+            # Training episodes
             for iter in range(max_iter):
                 message['iter'] = iter
 
@@ -108,9 +105,21 @@ class NameServer:
 
 
     def dispatch_energy_data(self, server_agent, message, agent_name_arr, agent_addr, d_map):
-
+        '''
+        Dispatch energy consumption and generation message to remote agent.
+        :param server_agent:
+        :param message:
+        :param agent_name_arr:
+        :param agent_addr:
+        :param d_map:
+        :return:
+        '''
         try:
-            for timestep in range(7200, 11490, 30):
+            # The for loop controls the configuration to dispatch Summer or Winter data
+            # Summer range - 218880 to 223170
+            # Winter range - 7200, 11490
+            # You can change this by inspecting the dataset file in the asssets folder
+            for timestep in range(218880, 223170, 30):
 
                 for name in agent_name_arr:
                     d = d_map[name]
@@ -147,6 +156,14 @@ class NameServer:
 
 
     def _send_message(self, server_agent, client_addr, alias,  message):
+        '''
+        Sends a message to remote agent.
+        :param server_agent:
+        :param client_addr:
+        :param alias:
+        :param message:
+        :return:
+        '''
 
         server_agent.connect(client_addr, alias=alias)
         server_agent.send(alias, message=message)
